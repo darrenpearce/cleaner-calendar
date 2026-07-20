@@ -19,5 +19,11 @@ if (!bookingColumns.includes('cleaner_id')) {
 if (!bookingColumns.includes('completed_at')) {
     db.exec('ALTER TABLE bookings ADD COLUMN completed_at TEXT');
 }
+if (!bookingColumns.includes('phone')) {
+    db.exec("ALTER TABLE bookings ADD COLUMN phone TEXT NOT NULL DEFAULT ''");
+}
+if (!bookingColumns.includes('address')) {
+    db.exec("ALTER TABLE bookings ADD COLUMN address TEXT NOT NULL DEFAULT ''");
+}
 
 module.exports = db;

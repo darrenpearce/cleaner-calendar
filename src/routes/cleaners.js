@@ -62,7 +62,7 @@ router.post('/cleaner/login', (req, res) => {
 router.get('/cleaner/jobs', requireCleaner, (req, res) => {
     const rows = db
         .prepare(
-            `SELECT id, name, email, service, date, time, completed_at
+            `SELECT id, name, email, phone, address, service, date, time, completed_at
              FROM bookings WHERE cleaner_id = ? ORDER BY date, time`
         )
         .all(req.cleaner.id);

@@ -7,10 +7,10 @@ const router = express.Router();
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
-const insertBookingWithTasks = db.transaction((name, email, service, date, time, taskIds) => {
+const insertBookingWithTasks = db.transaction((name, email, phone, address, service, date, time, taskIds) => {
     const result = db
-        .prepare('INSERT INTO bookings (name, email, service, date, time) VALUES (?, ?, ?, ?, ?)')
-        .run(name, email, service, date, time);
+        .prepare('INSERT INTO bookings (name, email, phone, address, service, date, time) VALUES (?, ?, ?, ?, ?, ?, ?)')
+        .run(name, email, phone, address, service, date, time);
 
     const insertTask = db.prepare('INSERT INTO booking_tasks (booking_id, task_id) VALUES (?, ?)');
     taskIds.forEach((taskId) => insertTask.run(result.lastInsertRowid, taskId));
@@ -34,8 +34,8 @@ router.get('/availability', (req, res) => {
 });
 
 router.post('/bookings', (req, res) => {
-    const { name, email, service, date, time, taskIds } = req.body || {};
-    if (!name || !email || !service || !date || !time) {
+    const { name, email, phone, address, service, date, time, taskIds } = req.body || {};
+    if (!name || !email || !phone || !address || !service || !date || !time) {
         return res.status(400).json({ error: 'missing-fields' });
     }
     if (!DATE_RE.test(date)) {
@@ -45,7 +45,7 @@ router.post('/bookings', (req, res) => {
     const cleanTaskIds = Array.isArray(taskIds) ? taskIds.filter((id) => Number.isInteger(id)) : [];
 
     try {
-        const id = insertBookingWithTasks(name, email, service, date, time, cleanTaskIds);
+        const id = insertBookingWithTasks(name, email, phone, address, service, date, time, cleanTaskIds);
         res.status(201).json({ id });
     } catch (err) {
         if (err.code === 'SQLITE_CONSTRAINT_UNIQUE') {
@@ -59,7 +59,7 @@ router.post('/bookings', (req, res) => {
 router.get('/bookings', requireAdmin, (req, res) => {
     const bookings = db
         .prepare(
-            `SELECT b.id, b.name, b.email, b.service, b.date, b.time, b.completed_at, b.created_at,
+            `SELECT b.id, b.name, b.email, b.phone, b.address, b.service, b.date, b.time, b.completed_at, b.created_at,
                     b.cleaner_id, c.name AS cleaner_name
              FROM bookings b LEFT JOIN cleaners c ON c.id = b.cleaner_id
              ORDER BY b.date, b.time`

@@ -428,7 +428,8 @@
         '<div><span class="job-time">' + b.time + '</span> &middot; <span class="job-service">' + (SERVICE_LABELS[b.service] || b.service) + '</span></div>' +
         '<span class="badge ' + statusClass + '">' + statusText + '</span>' +
         '</div>' +
-        '<div class="job-customer">' + escapeHtml(b.name) + ' &middot; ' + escapeHtml(b.email) + '</div>' +
+        '<div class="job-customer">' + escapeHtml(b.name) + ' &middot; ' + escapeHtml(b.email) + ' &middot; ' + escapeHtml(b.phone) + '</div>' +
+        '<div class="job-customer">' + escapeHtml(b.address) + '</div>' +
         (tasksHtml ? '<div class="task-tags">' + tasksHtml + '</div>' : '') +
         '<div class="assign-row">' +
         '<label for="assign-' + b.id + '">Staff</label>' +

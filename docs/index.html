@@ -278,6 +278,10 @@
       <input type="text" id="name-input" autocomplete="name">
       <label for="email-input">Email</label>
       <input type="email" id="email-input" autocomplete="email">
+      <label for="phone-input">Phone</label>
+      <input type="text" id="phone-input" inputmode="tel" autocomplete="tel">
+      <label for="address-input">Address</label>
+      <input type="text" id="address-input" autocomplete="street-address">
       <p class="msg" id="submit-msg"></p>
       <div class="actions">
         <button class="back" id="back-to-3">Back</button>
@@ -320,6 +324,8 @@
   var bookingSummary = document.getElementById('booking-summary');
   var nameInput = document.getElementById('name-input');
   var emailInput = document.getElementById('email-input');
+  var phoneInput = document.getElementById('phone-input');
+  var addressInput = document.getElementById('address-input');
   var submitMsg = document.getElementById('submit-msg');
   var confirmationText = document.getElementById('confirmation-text');
 
@@ -474,9 +480,11 @@
   submitBtn.addEventListener('click', function () {
     var name = nameInput.value.trim();
     var email = emailInput.value.trim();
+    var phone = phoneInput.value.trim();
+    var address = addressInput.value.trim();
 
-    if (!name || !email) {
-      submitMsg.textContent = 'Please enter your name and email.';
+    if (!name || !email || !phone || !address) {
+      submitMsg.textContent = 'Please fill in your name, email, phone, and address.';
       submitMsg.className = 'msg error';
       return;
     }
@@ -491,6 +499,8 @@
       body: JSON.stringify({
         name: name,
         email: email,
+        phone: phone,
+        address: address,
         service: state.taskNames.join(', '),
         date: state.date,
         time: state.time,

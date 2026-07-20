@@ -134,6 +134,8 @@
   .job-date { font-family: 'Quicksand', sans-serif; font-weight: 700; }
   .job-time { color: var(--pink); font-weight: 700; }
   .job-customer { color: var(--muted); font-size: 0.9rem; margin-bottom: 10px; }
+  .job-customer a { color: var(--pink); font-weight: 600; text-decoration: none; }
+  .job-customer a:hover { text-decoration: underline; }
   .badge {
     display: inline-block;
     font-size: 11px;
@@ -327,7 +329,8 @@
         (isDone ? '<span class="badge">Completed</span>' : '') +
         '</div>' +
         '<div>' + (SERVICE_LABELS[job.service] || job.service) + '</div>' +
-        '<div class="job-customer">' + escapeHtml(job.name) + '</div>' +
+        '<div class="job-customer">' + escapeHtml(job.name) + ' &middot; <a href="tel:' + encodeURIComponent(job.phone) + '">' + escapeHtml(job.phone) + '</a></div>' +
+        '<div class="job-customer"><a href="https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(job.address) + '" target="_blank" rel="noopener">' + escapeHtml(job.address) + '</a></div>' +
         (tasksHtml ? '<div class="task-checklist">' + tasksHtml + '</div>' : '') +
         (isDone ? '' : '<div class="job-actions"><button class="ghost complete-btn" data-job-id="' + job.id + '">Mark job complete</button></div>') +
         '</div>';
