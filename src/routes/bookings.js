@@ -18,6 +18,11 @@ const insertBookingWithTasks = db.transaction((name, email, service, date, time,
     return result.lastInsertRowid;
 });
 
+const deleteBooking = db.transaction((id) => {
+    db.prepare('DELETE FROM booking_tasks WHERE booking_id = ?').run(id);
+    return db.prepare('DELETE FROM bookings WHERE id = ?').run(id);
+});
+
 router.get('/availability', (req, res) => {
     const { date } = req.query;
     if (!date || !DATE_RE.test(date)) {
@@ -91,6 +96,14 @@ router.patch('/bookings/:id/assign', requireAdmin, (req, res) => {
     }
 
     const result = db.prepare('UPDATE bookings SET cleaner_id = ? WHERE id = ?').run(cleanerId, req.params.id);
+    if (result.changes === 0) {
+        return res.status(404).json({ error: 'not-found' });
+    }
+    res.json({ ok: true });
+});
+
+router.delete('/bookings/:id', requireAdmin, (req, res) => {
+    const result = deleteBooking(req.params.id);
     if (result.changes === 0) {
         return res.status(404).json({ error: 'not-found' });
     }

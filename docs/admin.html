@@ -115,6 +115,8 @@
     box-shadow: none;
   }
   button.ghost:hover { border-color: var(--pink); color: var(--pink); transform: none; }
+  button.ghost.danger { color: var(--danger); }
+  button.ghost.danger:hover { border-color: var(--danger); color: var(--danger); }
   table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
   th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--line); }
   th { font-family: 'Quicksand', sans-serif; color: var(--pink); font-weight: 700; text-transform: uppercase; font-size: 11.5px; letter-spacing: .08em; }
@@ -198,6 +200,7 @@
   .task-tag { background: var(--blush-2); color: var(--wine); font-size: 0.8rem; padding: 3px 10px; border-radius: 999px; }
   .assign-row { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
   .assign-row label { font-size: 0.85rem; color: var(--muted); }
+  .assign-row .delete-btn { margin-left: auto; padding: 8px 14px; font-size: 0.85rem; }
   select {
     padding: 8px 10px;
     border: 1.5px solid var(--line-2);
@@ -430,6 +433,7 @@
         '<div class="assign-row">' +
         '<label for="assign-' + b.id + '">Staff</label>' +
         '<select id="assign-' + b.id + '" data-id="' + b.id + '">' + cleanerOptionsHtml(b.cleaner_id) + '</select>' +
+        '<button class="ghost danger delete-btn" data-id="' + b.id + '">Delete</button>' +
         '</div>' +
         '</div>';
     });
@@ -441,6 +445,32 @@
         assignCleaner(this.dataset.id, this.value ? parseInt(this.value, 10) : null);
       });
     });
+
+    dayDetail.querySelectorAll('.delete-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        deleteBooking(this.dataset.id, key);
+      });
+    });
+  }
+
+  function deleteBooking(bookingId, key) {
+    if (!window.confirm('Delete this booking? This cannot be undone.')) return;
+
+    fetch(API_BASE + '/api/bookings/' + bookingId, {
+      method: 'DELETE',
+      headers: authHeaders()
+    })
+      .then(function (res) {
+        if (!res.ok) throw new Error('failed');
+        return loadBookings();
+      })
+      .then(function () {
+        renderDayDetail(key);
+      })
+      .catch(function () {
+        statusMsg.textContent = 'Could not delete booking. Please try again.';
+        statusMsg.className = 'msg error';
+      });
   }
 
   function assignCleaner(bookingId, cleanerId) {
