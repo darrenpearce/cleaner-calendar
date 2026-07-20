@@ -509,8 +509,63 @@
       return;
     }
     cleanersList.innerHTML = state.cleaners.map(function (c) {
-      return '<div class="list-row"><span>' + escapeHtml(c.name) + '</span></div>';
+      return '<div class="list-row"><span>' + escapeHtml(c.name) + '</span>' +
+        '<span style="display:flex;gap:8px;">' +
+        '<button class="ghost reset-pin-btn" data-id="' + c.id + '" data-name="' + escapeHtml(c.name) + '">Reset PIN</button>' +
+        '<button class="ghost danger delete-staff-btn" data-id="' + c.id + '" data-name="' + escapeHtml(c.name) + '">Delete</button>' +
+        '</span></div>';
     }).join('');
+
+    cleanersList.querySelectorAll('.reset-pin-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () { resetPin(this.dataset.id, this.dataset.name); });
+    });
+    cleanersList.querySelectorAll('.delete-staff-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () { deleteCleaner(this.dataset.id, this.dataset.name); });
+    });
+  }
+
+  function resetPin(id, name) {
+    var pin = window.prompt('New 4-6 digit PIN for ' + name + ':');
+    if (pin === null) return;
+    if (!/^\d{4,6}$/.test(pin.trim())) {
+      cleanerMsg.textContent = 'PIN must be 4-6 digits.';
+      cleanerMsg.className = 'msg error';
+      return;
+    }
+
+    fetch(API_BASE + '/api/admin/cleaners/' + id + '/pin', {
+      method: 'PATCH',
+      headers: Object.assign({ 'Content-Type': 'application/json' }, authHeaders()),
+      body: JSON.stringify({ pin: pin.trim() })
+    })
+      .then(function (res) {
+        if (!res.ok) throw new Error('failed');
+        cleanerMsg.textContent = 'PIN reset for ' + name + '.';
+        cleanerMsg.className = 'msg success';
+      })
+      .catch(function () {
+        cleanerMsg.textContent = 'Could not reset PIN. Please try again.';
+        cleanerMsg.className = 'msg error';
+      });
+  }
+
+  function deleteCleaner(id, name) {
+    if (!window.confirm('Remove ' + name + '? Any jobs assigned to them will become unassigned.')) return;
+
+    fetch(API_BASE + '/api/admin/cleaners/' + id, {
+      method: 'DELETE',
+      headers: authHeaders()
+    })
+      .then(function (res) {
+        if (!res.ok) throw new Error('failed');
+        cleanerMsg.textContent = name + ' removed.';
+        cleanerMsg.className = 'msg success';
+        return Promise.all([loadCleaners(), loadBookings()]);
+      })
+      .catch(function () {
+        cleanerMsg.textContent = 'Could not remove staff. Please try again.';
+        cleanerMsg.className = 'msg error';
+      });
   }
 
   addCleanerForm.addEventListener('submit', function (e) {

@@ -127,4 +127,31 @@ router.post('/admin/cleaners', requireAdmin, (req, res) => {
     }
 });
 
+router.patch('/admin/cleaners/:id/pin', requireAdmin, (req, res) => {
+    const { pin } = req.body || {};
+    if (!pin || !/^\d{4,6}$/.test(String(pin))) {
+        return res.status(400).json({ error: 'missing-fields' });
+    }
+
+    const pinHash = bcrypt.hashSync(String(pin), 10);
+    const result = db.prepare('UPDATE cleaners SET pin_hash = ? WHERE id = ?').run(pinHash, req.params.id);
+    if (result.changes === 0) {
+        return res.status(404).json({ error: 'not-found' });
+    }
+    res.json({ ok: true });
+});
+
+const deleteCleaner = db.transaction((id) => {
+    db.prepare('UPDATE bookings SET cleaner_id = NULL WHERE cleaner_id = ?').run(id);
+    return db.prepare('DELETE FROM cleaners WHERE id = ?').run(id);
+});
+
+router.delete('/admin/cleaners/:id', requireAdmin, (req, res) => {
+    const result = deleteCleaner(req.params.id);
+    if (result.changes === 0) {
+        return res.status(404).json({ error: 'not-found' });
+    }
+    res.json({ ok: true });
+});
+
 module.exports = router;
