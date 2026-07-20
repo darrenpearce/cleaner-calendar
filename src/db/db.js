@@ -12,4 +12,12 @@ db.pragma('journal_mode = WAL');
 const schema = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8');
 db.exec(schema);
 
+const bookingColumns = db.prepare("PRAGMA table_info(bookings)").all().map((c) => c.name);
+if (!bookingColumns.includes('cleaner_id')) {
+    db.exec('ALTER TABLE bookings ADD COLUMN cleaner_id INTEGER');
+}
+if (!bookingColumns.includes('completed_at')) {
+    db.exec('ALTER TABLE bookings ADD COLUMN completed_at TEXT');
+}
+
 module.exports = db;

@@ -35,6 +35,37 @@
     -webkit-font-smoothing: antialiased;
   }
   .wrap { max-width: 560px; margin: 0 auto; }
+  .site-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 12px 18px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow-sm);
+  }
+  .site-nav .brand {
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 700;
+    font-size: 1.05rem;
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .site-nav .brand .script { font-family: 'Parisienne', cursive; color: var(--pink); font-size: 1.3em; }
+  .site-nav nav { display: flex; gap: 4px; }
+  .site-nav nav a {
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--muted);
+    text-decoration: none;
+    padding: 7px 12px;
+    border-radius: 9px;
+    transition: background 0.15s, color 0.15s;
+  }
+  .site-nav nav a:hover, .site-nav nav a.active { background: var(--blush-2); color: var(--pink); }
   h1 {
     font-family: 'Quicksand', sans-serif;
     font-weight: 700;
@@ -110,6 +141,23 @@
     cursor: not-allowed;
     text-decoration: line-through;
   }
+  .task-list { display: flex; flex-direction: column; gap: 10px; }
+  .task-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border: 1.5px solid var(--line-2);
+    border-radius: 12px;
+    padding: 12px 14px;
+    cursor: pointer;
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 600;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .task-row:hover { border-color: var(--pink); }
+  .task-row.selected { border-color: var(--pink); background: var(--blush-2); color: var(--wine); }
+  .task-row input { width: 18px; height: 18px; accent-color: var(--pink); }
+  .task-empty { color: var(--muted); font-size: 0.9rem; }
   input[type="date"], input[type="text"], input[type="email"] {
     width: 100%;
     padding: 12px;
@@ -176,6 +224,15 @@
 </head>
 <body>
 <div class="wrap">
+  <div class="site-nav">
+    <a class="brand" href="index.html">Book<span class="script">clean</span></a>
+    <nav>
+      <a href="index.html" class="active">Book</a>
+      <a href="cleaner.html">Cleaner Login</a>
+      <a href="admin.html">Admin</a>
+    </nav>
+  </div>
+
   <h1>Book your <span class="script">clean</span></h1>
   <p class="sub">Pick a service, date, and time that works for you.</p>
 
@@ -185,6 +242,7 @@
       <div id="step-dot-2"></div>
       <div id="step-dot-3"></div>
       <div id="step-dot-4"></div>
+      <div id="step-dot-5"></div>
     </div>
 
     <!-- Step 1: Service -->
@@ -197,31 +255,41 @@
       </div>
     </section>
 
-    <!-- Step 2: Date -->
+    <!-- Step 2: Extra tasks -->
     <section id="step-2" style="display:none">
-      <h2>2. Choose a date</h2>
-      <label for="date-input">Date</label>
-      <input type="date" id="date-input">
+      <h2>2. Extra tasks (optional)</h2>
+      <div class="task-list" id="task-list"></div>
       <div class="actions">
         <button class="back" id="back-to-1">Back</button>
-        <button class="primary" id="to-step-3" disabled>Next</button>
+        <button class="primary" id="to-step-3">Next</button>
       </div>
     </section>
 
-    <!-- Step 3: Time -->
+    <!-- Step 3: Date -->
     <section id="step-3" style="display:none">
-      <h2>3. Choose a time</h2>
-      <div class="time-grid" id="time-grid"></div>
-      <p class="msg" id="availability-msg"></p>
+      <h2>3. Choose a date</h2>
+      <label for="date-input">Date</label>
+      <input type="date" id="date-input">
       <div class="actions">
         <button class="back" id="back-to-2">Back</button>
         <button class="primary" id="to-step-4" disabled>Next</button>
       </div>
     </section>
 
-    <!-- Step 4: Details -->
+    <!-- Step 4: Time -->
     <section id="step-4" style="display:none">
-      <h2>4. Your details</h2>
+      <h2>4. Choose a time</h2>
+      <div class="time-grid" id="time-grid"></div>
+      <p class="msg" id="availability-msg"></p>
+      <div class="actions">
+        <button class="back" id="back-to-3">Back</button>
+        <button class="primary" id="to-step-5" disabled>Next</button>
+      </div>
+    </section>
+
+    <!-- Step 5: Details -->
+    <section id="step-5" style="display:none">
+      <h2>5. Your details</h2>
       <div class="summary" id="booking-summary"></div>
       <label for="name-input">Name</label>
       <input type="text" id="name-input" autocomplete="name">
@@ -229,13 +297,13 @@
       <input type="email" id="email-input" autocomplete="email">
       <p class="msg" id="submit-msg"></p>
       <div class="actions">
-        <button class="back" id="back-to-3">Back</button>
+        <button class="back" id="back-to-4">Back</button>
         <button class="primary" id="submit-booking">Confirm booking</button>
       </div>
     </section>
 
-    <!-- Step 5: Confirmation -->
-    <section id="step-5" style="display:none">
+    <!-- Step 6: Confirmation -->
+    <section id="step-6" style="display:none">
       <div class="confirmation">
         <div class="icon">&#9989;</div>
         <h2>Booking confirmed</h2>
@@ -260,13 +328,18 @@
 
   var TIME_SLOTS = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00'];
 
+  var TOTAL_STEPS = 6;
+  var TOTAL_DOTS = 5;
+
   var state = {
     service: null,
+    taskIds: [],
     date: null,
     time: null
   };
 
   var serviceGrid = document.getElementById('service-grid');
+  var taskList = document.getElementById('task-list');
   var dateInput = document.getElementById('date-input');
   var timeGrid = document.getElementById('time-grid');
   var availabilityMsg = document.getElementById('availability-msg');
@@ -279,16 +352,17 @@
   var toStep2 = document.getElementById('to-step-2');
   var toStep3 = document.getElementById('to-step-3');
   var toStep4 = document.getElementById('to-step-4');
+  var toStep5 = document.getElementById('to-step-5');
   var submitBtn = document.getElementById('submit-booking');
 
   var todayStr = new Date().toISOString().slice(0, 10);
   dateInput.min = todayStr;
 
   function showStep(n) {
-    for (var i = 1; i <= 5; i++) {
+    for (var i = 1; i <= TOTAL_STEPS; i++) {
       document.getElementById('step-' + i).style.display = (i === n) ? 'block' : 'none';
     }
-    for (var d = 1; d <= 4; d++) {
+    for (var d = 1; d <= TOTAL_DOTS; d++) {
       var dot = document.getElementById('step-dot-' + d);
       dot.className = d < n ? 'done' : (d === n ? 'active' : '');
     }
@@ -309,11 +383,57 @@
     });
   }
 
+  function fetchTasks() {
+    taskList.innerHTML = '<p class="task-empty">Loading extra tasks...</p>';
+    return fetch(API_BASE + '/api/tasks')
+      .then(function (res) {
+        if (!res.ok) throw new Error('bad-response');
+        return res.json();
+      })
+      .then(function (data) {
+        renderTasks(data.tasks || []);
+      })
+      .catch(function () {
+        taskList.innerHTML = '<p class="task-empty">No extra tasks available right now.</p>';
+      });
+  }
+
+  function renderTasks(tasks) {
+    taskList.innerHTML = '';
+    if (!tasks.length) {
+      taskList.innerHTML = '<p class="task-empty">No extra tasks available right now.</p>';
+      return;
+    }
+
+    tasks.forEach(function (task) {
+      var row = document.createElement('label');
+      row.className = 'task-row';
+
+      var checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.value = task.id;
+
+      checkbox.addEventListener('change', function () {
+        if (checkbox.checked) {
+          state.taskIds.push(task.id);
+          row.classList.add('selected');
+        } else {
+          state.taskIds = state.taskIds.filter(function (id) { return id !== task.id; });
+          row.classList.remove('selected');
+        }
+      });
+
+      row.appendChild(checkbox);
+      row.appendChild(document.createTextNode(task.name));
+      taskList.appendChild(row);
+    });
+  }
+
   function fetchAvailability(date) {
     timeGrid.innerHTML = '';
     availabilityMsg.textContent = 'Loading availability...';
     availabilityMsg.className = 'msg';
-    toStep4.disabled = true;
+    toStep5.disabled = true;
 
     return fetch(API_BASE + '/api/availability?date=' + encodeURIComponent(date))
       .then(function (res) {
@@ -334,7 +454,7 @@
   function renderTimeSlots(bookedSlots) {
     timeGrid.innerHTML = '';
     state.time = null;
-    toStep4.disabled = true;
+    toStep5.disabled = true;
 
     TIME_SLOTS.forEach(function (slot) {
       var btn = document.createElement('button');
@@ -349,7 +469,7 @@
           state.time = slot;
           Array.prototype.forEach.call(timeGrid.children, function (c) { c.classList.remove('selected'); });
           btn.classList.add('selected');
-          toStep4.disabled = false;
+          toStep5.disabled = false;
         });
       }
       timeGrid.appendChild(btn);
@@ -362,26 +482,32 @@
       state.date + ' at ' + state.time;
   }
 
-  toStep2.addEventListener('click', function () { showStep(2); });
+  toStep2.addEventListener('click', function () {
+    showStep(2);
+    fetchTasks();
+  });
   document.getElementById('back-to-1').addEventListener('click', function () { showStep(1); });
 
-  dateInput.addEventListener('change', function () {
-    toStep3.disabled = !dateInput.value;
-  });
-
-  toStep3.addEventListener('click', function () {
-    state.date = dateInput.value;
-    showStep(3);
-    fetchAvailability(state.date);
-  });
+  toStep3.addEventListener('click', function () { showStep(3); });
   document.getElementById('back-to-2').addEventListener('click', function () { showStep(2); });
 
+  dateInput.addEventListener('change', function () {
+    toStep4.disabled = !dateInput.value;
+  });
+
   toStep4.addEventListener('click', function () {
-    renderSummary();
-    submitMsg.textContent = '';
+    state.date = dateInput.value;
     showStep(4);
+    fetchAvailability(state.date);
   });
   document.getElementById('back-to-3').addEventListener('click', function () { showStep(3); });
+
+  toStep5.addEventListener('click', function () {
+    renderSummary();
+    submitMsg.textContent = '';
+    showStep(5);
+  });
+  document.getElementById('back-to-4').addEventListener('click', function () { showStep(4); });
 
   submitBtn.addEventListener('click', function () {
     var name = nameInput.value.trim();
@@ -405,7 +531,8 @@
         email: email,
         service: state.service.id,
         date: state.date,
-        time: state.time
+        time: state.time,
+        taskIds: state.taskIds
       })
     })
       .then(function (res) {
@@ -416,13 +543,13 @@
         if (result.status === 201) {
           confirmationText.textContent =
             state.service.label + ' on ' + state.date + ' at ' + state.time + '. A confirmation has been noted for ' + email + '.';
-          showStep(5);
+          showStep(6);
           return;
         }
         if (result.status === 409) {
           submitMsg.textContent = 'Sorry, that slot was just taken. Please pick another time.';
           submitMsg.className = 'msg error';
-          showStep(3);
+          showStep(4);
           fetchAvailability(state.date);
           return;
         }

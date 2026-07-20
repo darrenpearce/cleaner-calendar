@@ -3,6 +3,8 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const bookingsRouter = require('./routes/bookings');
+const tasksRouter = require('./routes/tasks');
+const cleanersRouter = require('./routes/cleaners');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -14,7 +16,7 @@ const ALLOWED_ORIGINS = (
     .split(',')
     .map((origin) => origin.trim());
 
-app.use(cors({ origin: ALLOWED_ORIGINS, allowedHeaders: ['Content-Type', 'X-Admin-Key'] }));
+app.use(cors({ origin: ALLOWED_ORIGINS, allowedHeaders: ['Content-Type', 'X-Admin-Key', 'Authorization'] }));
 app.use(express.json());
 
 app.get('/health', (req, res) => {
@@ -26,6 +28,8 @@ app.get('/health', (req, res) => {
 });
 
 app.use('/api', bookingsRouter);
+app.use('/api', tasksRouter);
+app.use('/api', cleanersRouter);
 
 app.listen(PORT, () => {
     console.log(`Cleaner Calendar running on port ${PORT}`);

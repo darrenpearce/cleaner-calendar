@@ -6,20 +6,24 @@
 <title>Bookings Admin</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700&family=Quicksand:wght@500;600;700&family=Parisienne&display=swap" rel="stylesheet">
 <style>
   :root {
     --ink: #2B2A33;
     --muted: #8A7E86;
     --pink: #E93C8F;
+    --pink-soft: #F7A8C9;
+    --blush: #FCE3EF;
     --blush-2: #FDEEF5;
     --line: #F6D9E7;
     --line-2: #F0C9DD;
     --cream: #FFF9FC;
     --wine: #7E1448;
     --shadow-sm: 0 6px 16px rgba(233,60,143,.14);
+    --shadow-md: 0 18px 44px rgba(126,20,72,.14);
     --radius: 18px;
     --danger: #dc2626;
+    --success: #16a34a;
   }
   * { box-sizing: border-box; }
   body {
@@ -30,12 +34,44 @@
     padding: 24px 16px 64px;
     -webkit-font-smoothing: antialiased;
   }
-  .wrap { max-width: 900px; margin: 0 auto; }
+  .wrap { max-width: 960px; margin: 0 auto; }
+  .site-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 12px 18px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow-sm);
+  }
+  .site-nav .brand { font-family: 'Quicksand', sans-serif; font-weight: 700; font-size: 1.05rem; color: var(--ink); text-decoration: none; }
+  .site-nav .brand .script { font-family: 'Parisienne', cursive; color: var(--pink); font-size: 1.3em; }
+  .site-nav nav { display: flex; gap: 4px; }
+  .site-nav nav a {
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--muted);
+    text-decoration: none;
+    padding: 7px 12px;
+    border-radius: 9px;
+    transition: background 0.15s, color 0.15s;
+  }
+  .site-nav nav a:hover, .site-nav nav a.active { background: var(--blush-2); color: var(--pink); }
   h1 {
     font-family: 'Quicksand', sans-serif;
     font-weight: 700;
     font-size: 1.5rem;
     margin: 0 0 16px;
+    color: var(--ink);
+  }
+  h2 {
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 700;
+    font-size: 1.05rem;
+    margin: 0 0 14px;
     color: var(--ink);
   }
   .card {
@@ -44,9 +80,10 @@
     border-radius: var(--radius);
     padding: 22px;
     box-shadow: var(--shadow-sm);
+    margin-bottom: 20px;
   }
   .key-row { display: flex; gap: 10px; margin-bottom: 16px; }
-  input[type="password"], input[type="text"] {
+  input[type="password"], input[type="text"], input[type="number"] {
     flex: 1;
     padding: 10px 12px;
     border: 1.5px solid var(--line-2);
@@ -55,7 +92,7 @@
     font-family: inherit;
     color: var(--ink);
   }
-  input:focus-visible { outline: 3px solid var(--pink); outline-offset: 2px; }
+  input:focus-visible, select:focus-visible { outline: 3px solid var(--pink); outline-offset: 2px; }
   button {
     font-family: 'Quicksand', sans-serif;
     padding: 10px 20px;
@@ -68,8 +105,16 @@
     font-weight: 700;
     box-shadow: var(--shadow-sm);
     transition: transform 0.15s, box-shadow 0.15s;
+    white-space: nowrap;
   }
   button:hover { transform: translateY(-2px); }
+  button.ghost {
+    background: #fff;
+    color: var(--ink);
+    border: 1.5px solid var(--line-2);
+    box-shadow: none;
+  }
+  button.ghost:hover { border-color: var(--pink); color: var(--pink); transform: none; }
   table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
   th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--line); }
   th { font-family: 'Quicksand', sans-serif; color: var(--pink); font-weight: 700; text-transform: uppercase; font-size: 11.5px; letter-spacing: .08em; }
@@ -77,18 +122,165 @@
   .msg { font-size: 0.9rem; margin-bottom: 12px; }
   .msg.error { color: var(--danger); }
   .msg.muted { color: var(--muted); }
+
+  .tabs { display: flex; gap: 6px; margin-bottom: 20px; }
+  .tab-btn {
+    background: #fff;
+    color: var(--muted);
+    border: 1.5px solid var(--line-2);
+    box-shadow: none;
+    font-size: 0.9rem;
+    padding: 9px 18px;
+  }
+  .tab-btn.active { background: var(--blush-2); color: var(--pink); border-color: var(--pink); transform: none; }
+  .tab-btn:hover { transform: none; border-color: var(--pink); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  .cal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .cal-header .month-label { font-family: 'Quicksand', sans-serif; font-weight: 700; font-size: 1.1rem; }
+  .cal-nav { display: flex; gap: 8px; }
+  .cal-nav button { padding: 8px 14px; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-bottom: 20px; }
+  .cal-dow { text-align: center; font-family: 'Quicksand', sans-serif; font-weight: 700; font-size: 11px; color: var(--muted); text-transform: uppercase; padding-bottom: 4px; }
+  .cal-day {
+    min-height: 64px;
+    border: 1.5px solid var(--line-2);
+    border-radius: 10px;
+    padding: 6px 8px;
+    cursor: pointer;
+    background: #fff;
+    transition: border-color 0.15s, background 0.15s;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .cal-day.empty { visibility: hidden; cursor: default; }
+  .cal-day:hover { border-color: var(--pink); }
+  .cal-day.selected { border-color: var(--pink); background: var(--blush-2); }
+  .cal-day.today .day-num { color: var(--pink); }
+  .cal-day .day-num { font-family: 'Quicksand', sans-serif; font-weight: 700; font-size: 0.85rem; }
+  .cal-day .day-count {
+    align-self: flex-start;
+    background: var(--pink);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    border-radius: 999px;
+    padding: 1px 7px;
+  }
+
+  .day-detail { border-top: 1px solid var(--line); padding-top: 18px; }
+  .job-card {
+    border: 1.5px solid var(--line-2);
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+  }
+  .job-card .job-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 8px; }
+  .job-card .job-time { font-family: 'Quicksand', sans-serif; font-weight: 700; color: var(--pink); }
+  .job-card .job-service { font-family: 'Quicksand', sans-serif; font-weight: 600; }
+  .job-card .job-customer { color: var(--muted); font-size: 0.9rem; margin-bottom: 8px; }
+  .badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    font-family: 'Quicksand', sans-serif;
+    padding: 3px 10px;
+    border-radius: 999px;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+  }
+  .badge.unassigned { background: var(--blush-2); color: var(--muted); }
+  .badge.assigned { background: var(--blush-2); color: var(--pink); }
+  .badge.completed { background: #dcfce7; color: var(--success); }
+  .task-tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+  .task-tag { background: var(--blush-2); color: var(--wine); font-size: 0.8rem; padding: 3px 10px; border-radius: 999px; }
+  .assign-row { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+  .assign-row label { font-size: 0.85rem; color: var(--muted); }
+  select {
+    padding: 8px 10px;
+    border: 1.5px solid var(--line-2);
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 0.9rem;
+    color: var(--ink);
+    background: #fff;
+  }
+
+  .list-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .list-row:last-child { border-bottom: none; }
+  .add-form { display: flex; gap: 10px; margin-top: 16px; }
+  .add-form input { flex: 1; }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>Bookings</h1>
+  <div class="site-nav">
+    <a class="brand" href="index.html">Book<span class="script">clean</span></a>
+    <nav>
+      <a href="index.html">Book</a>
+      <a href="cleaner.html">Cleaner Login</a>
+      <a href="admin.html" class="active">Admin</a>
+    </nav>
+  </div>
+
+  <h1>Bookings Admin</h1>
+
   <div class="card">
     <div class="key-row">
       <input type="password" id="key-input" placeholder="Admin key">
-      <button id="load-btn">Load bookings</button>
+      <button id="load-btn">Load</button>
     </div>
     <p class="msg" id="status-msg"></p>
-    <div id="table-wrap"></div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="calendar">Calendar</button>
+    <button class="tab-btn" data-tab="cleaners">Cleaners</button>
+    <button class="tab-btn" data-tab="tasks">Tasks</button>
+  </div>
+
+  <div class="tab-panel active" id="tab-calendar">
+    <div class="card">
+      <div class="cal-header">
+        <div class="cal-nav">
+          <button class="ghost" id="cal-prev">&larr;</button>
+          <button class="ghost" id="cal-next">&rarr;</button>
+        </div>
+        <div class="month-label" id="cal-month-label"></div>
+        <span style="width:82px"></span>
+      </div>
+      <div class="cal-grid" id="cal-grid"></div>
+      <div class="day-detail" id="day-detail">
+        <p class="msg muted">Select a day to see its bookings.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="tab-cleaners">
+    <div class="card">
+      <h2>Cleaners</h2>
+      <div id="cleaners-list"></div>
+      <form class="add-form" id="add-cleaner-form">
+        <input type="text" id="cleaner-name-input" placeholder="Name" required>
+        <input type="text" id="cleaner-pin-input" placeholder="4-6 digit PIN" inputmode="numeric" pattern="\d{4,6}" required>
+        <button type="submit">Add cleaner</button>
+      </form>
+      <p class="msg" id="cleaner-msg"></p>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="tab-tasks">
+    <div class="card">
+      <h2>Extra tasks</h2>
+      <div id="tasks-list"></div>
+      <form class="add-form" id="add-task-form">
+        <input type="text" id="task-name-input" placeholder="Task name" required>
+        <button type="submit">Add task</button>
+      </form>
+      <p class="msg" id="task-msg"></p>
+    </div>
   </div>
 </div>
 
@@ -99,46 +291,342 @@
   var API_BASE = 'https://cleaner-calendar-production.up.railway.app';
   var STORAGE_KEY = 'cleaner-calendar-admin-key';
 
+  var SERVICE_LABELS = {
+    standard: 'Standard Clean',
+    deep: 'Deep Clean',
+    move: 'Move In/Out',
+    oven: 'Oven Clean'
+  };
+
   var keyInput = document.getElementById('key-input');
   var loadBtn = document.getElementById('load-btn');
   var statusMsg = document.getElementById('status-msg');
-  var tableWrap = document.getElementById('table-wrap');
+
+  var calGrid = document.getElementById('cal-grid');
+  var calMonthLabel = document.getElementById('cal-month-label');
+  var dayDetail = document.getElementById('day-detail');
+
+  var cleanersList = document.getElementById('cleaners-list');
+  var cleanerMsg = document.getElementById('cleaner-msg');
+  var addCleanerForm = document.getElementById('add-cleaner-form');
+
+  var tasksList = document.getElementById('tasks-list');
+  var taskMsg = document.getElementById('task-msg');
+  var addTaskForm = document.getElementById('add-task-form');
+
+  var state = {
+    bookings: [],
+    bookingsByDate: {},
+    cleaners: [],
+    tasks: [],
+    monthDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+    selectedDate: null
+  };
 
   var savedKey = localStorage.getItem(STORAGE_KEY);
   if (savedKey) keyInput.value = savedKey;
 
-  function renderTable(bookings) {
-    if (!bookings.length) {
-      tableWrap.innerHTML = '';
-      statusMsg.textContent = 'No bookings yet.';
-      statusMsg.className = 'msg muted';
-      return;
-    }
-
-    var rows = bookings.map(function (b) {
-      return '<tr>' +
-        '<td>' + b.date + '</td>' +
-        '<td>' + b.time + '</td>' +
-        '<td>' + b.service + '</td>' +
-        '<td>' + escapeHtml(b.name) + '</td>' +
-        '<td>' + escapeHtml(b.email) + '</td>' +
-        '<td>' + b.created_at + '</td>' +
-        '</tr>';
-    }).join('');
-
-    tableWrap.innerHTML =
-      '<table><thead><tr>' +
-      '<th>Date</th><th>Time</th><th>Service</th><th>Name</th><th>Email</th><th>Booked at</th>' +
-      '</tr></thead><tbody>' + rows + '</tbody></table>';
+  function authHeaders() {
+    return { 'X-Admin-Key': keyInput.value.trim() };
   }
 
   function escapeHtml(str) {
     var div = document.createElement('div');
-    div.textContent = str;
+    div.textContent = str == null ? '' : str;
     return div.innerHTML;
   }
 
+  function pad2(n) { return n < 10 ? '0' + n : '' + n; }
+  function dateKey(d) { return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); }
+
+  // ---- tabs ----
+  document.querySelectorAll('.tab-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('.tab-btn').forEach(function (b) { b.classList.remove('active'); });
+      document.querySelectorAll('.tab-panel').forEach(function (p) { p.classList.remove('active'); });
+      btn.classList.add('active');
+      document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    });
+  });
+
+  // ---- calendar ----
+  function renderCalendar() {
+    var monthDate = state.monthDate;
+    calMonthLabel.textContent = monthDate.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+    calGrid.innerHTML = '';
+
+    ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].forEach(function (d) {
+      var el = document.createElement('div');
+      el.className = 'cal-dow';
+      el.textContent = d;
+      calGrid.appendChild(el);
+    });
+
+    var year = monthDate.getFullYear();
+    var month = monthDate.getMonth();
+    var firstDow = new Date(year, month, 1).getDay();
+    var daysInMonth = new Date(year, month + 1, 0).getDate();
+    var todayKey = dateKey(new Date());
+
+    for (var i = 0; i < firstDow; i++) {
+      var blank = document.createElement('div');
+      blank.className = 'cal-day empty';
+      calGrid.appendChild(blank);
+    }
+
+    for (var day = 1; day <= daysInMonth; day++) {
+      var cellDate = new Date(year, month, day);
+      var key = dateKey(cellDate);
+      var cell = document.createElement('div');
+      cell.className = 'cal-day';
+      if (key === todayKey) cell.classList.add('today');
+      if (key === state.selectedDate) cell.classList.add('selected');
+
+      var count = (state.bookingsByDate[key] || []).length;
+      cell.innerHTML = '<span class="day-num">' + day + '</span>' +
+        (count ? '<span class="day-count">' + count + '</span>' : '');
+
+      cell.addEventListener('click', function () {
+        var k = this.dataset.key;
+        state.selectedDate = k;
+        renderCalendar();
+        renderDayDetail(k);
+      });
+      cell.dataset.key = key;
+      calGrid.appendChild(cell);
+    }
+  }
+
+  function cleanerOptionsHtml(selectedId) {
+    var opts = '<option value="">Unassigned</option>';
+    state.cleaners.forEach(function (c) {
+      opts += '<option value="' + c.id + '"' + (c.id === selectedId ? ' selected' : '') + '>' + escapeHtml(c.name) + '</option>';
+    });
+    return opts;
+  }
+
+  function renderDayDetail(key) {
+    var bookings = state.bookingsByDate[key] || [];
+    if (!bookings.length) {
+      dayDetail.innerHTML = '<p class="msg muted">No bookings on ' + key + '.</p>';
+      return;
+    }
+
+    var html = '<h2>' + key + '</h2>';
+    bookings.forEach(function (b) {
+      var statusClass = b.completed_at ? 'completed' : (b.cleaner_id ? 'assigned' : 'unassigned');
+      var statusText = b.completed_at ? 'Completed' : (b.cleaner_id ? 'Assigned' : 'Unassigned');
+      var tasksHtml = (b.tasks || []).map(function (t) {
+        return '<span class="task-tag">' + (t.completedAt ? '&#10003; ' : '') + escapeHtml(t.name) + '</span>';
+      }).join('');
+
+      html += '<div class="job-card" data-id="' + b.id + '">' +
+        '<div class="job-top">' +
+        '<div><span class="job-time">' + b.time + '</span> &middot; <span class="job-service">' + (SERVICE_LABELS[b.service] || b.service) + '</span></div>' +
+        '<span class="badge ' + statusClass + '">' + statusText + '</span>' +
+        '</div>' +
+        '<div class="job-customer">' + escapeHtml(b.name) + ' &middot; ' + escapeHtml(b.email) + '</div>' +
+        (tasksHtml ? '<div class="task-tags">' + tasksHtml + '</div>' : '') +
+        '<div class="assign-row">' +
+        '<label for="assign-' + b.id + '">Cleaner</label>' +
+        '<select id="assign-' + b.id + '" data-id="' + b.id + '">' + cleanerOptionsHtml(b.cleaner_id) + '</select>' +
+        '</div>' +
+        '</div>';
+    });
+
+    dayDetail.innerHTML = html;
+
+    dayDetail.querySelectorAll('select[data-id]').forEach(function (sel) {
+      sel.addEventListener('change', function () {
+        assignCleaner(this.dataset.id, this.value ? parseInt(this.value, 10) : null);
+      });
+    });
+  }
+
+  function assignCleaner(bookingId, cleanerId) {
+    fetch(API_BASE + '/api/bookings/' + bookingId + '/assign', {
+      method: 'PATCH',
+      headers: Object.assign({ 'Content-Type': 'application/json' }, authHeaders()),
+      body: JSON.stringify({ cleanerId: cleanerId })
+    })
+      .then(function (res) {
+        if (!res.ok) throw new Error('failed');
+        return loadBookings();
+      })
+      .then(function () {
+        if (state.selectedDate) renderDayDetail(state.selectedDate);
+      })
+      .catch(function () {
+        statusMsg.textContent = 'Could not update assignment. Please try again.';
+        statusMsg.className = 'msg error';
+      });
+  }
+
+  document.getElementById('cal-prev').addEventListener('click', function () {
+    state.monthDate = new Date(state.monthDate.getFullYear(), state.monthDate.getMonth() - 1, 1);
+    renderCalendar();
+  });
+  document.getElementById('cal-next').addEventListener('click', function () {
+    state.monthDate = new Date(state.monthDate.getFullYear(), state.monthDate.getMonth() + 1, 1);
+    renderCalendar();
+  });
+
+  // ---- cleaners ----
+  function renderCleaners() {
+    if (!state.cleaners.length) {
+      cleanersList.innerHTML = '<p class="msg muted">No cleaners added yet.</p>';
+      return;
+    }
+    cleanersList.innerHTML = state.cleaners.map(function (c) {
+      return '<div class="list-row"><span>' + escapeHtml(c.name) + '</span></div>';
+    }).join('');
+  }
+
+  addCleanerForm.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var name = document.getElementById('cleaner-name-input').value.trim();
+    var pin = document.getElementById('cleaner-pin-input').value.trim();
+
+    cleanerMsg.textContent = 'Adding...';
+    cleanerMsg.className = 'msg muted';
+
+    fetch(API_BASE + '/api/admin/cleaners', {
+      method: 'POST',
+      headers: Object.assign({ 'Content-Type': 'application/json' }, authHeaders()),
+      body: JSON.stringify({ name: name, pin: pin })
+    })
+      .then(function (res) { return res.json().then(function (data) { return { status: res.status, data: data }; }); })
+      .then(function (result) {
+        if (result.status === 201) {
+          cleanerMsg.textContent = 'Cleaner added.';
+          cleanerMsg.className = 'msg success';
+          addCleanerForm.reset();
+          return loadCleaners();
+        }
+        if (result.data.error === 'cleaner-exists') {
+          cleanerMsg.textContent = 'A cleaner with that name already exists.';
+        } else {
+          cleanerMsg.textContent = 'Please enter a name and a 4-6 digit PIN.';
+        }
+        cleanerMsg.className = 'msg error';
+      })
+      .catch(function () {
+        cleanerMsg.textContent = 'Could not add cleaner. Please try again.';
+        cleanerMsg.className = 'msg error';
+      });
+  });
+
+  // ---- tasks ----
+  function renderTasks() {
+    if (!state.tasks.length) {
+      tasksList.innerHTML = '<p class="msg muted">No tasks added yet.</p>';
+      return;
+    }
+    tasksList.innerHTML = state.tasks.map(function (t) {
+      return '<div class="list-row">' +
+        '<span>' + escapeHtml(t.name) + (t.active ? '' : ' <span class="msg muted">(inactive)</span>') + '</span>' +
+        '<button class="ghost" data-id="' + t.id + '" data-active="' + t.active + '">' + (t.active ? 'Deactivate' : 'Activate') + '</button>' +
+        '</div>';
+    }).join('');
+
+    tasksList.querySelectorAll('button[data-id]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var makeActive = this.dataset.active !== '1';
+        fetch(API_BASE + '/api/admin/tasks/' + this.dataset.id, {
+          method: 'PATCH',
+          headers: Object.assign({ 'Content-Type': 'application/json' }, authHeaders()),
+          body: JSON.stringify({ active: makeActive })
+        })
+          .then(function (res) { if (!res.ok) throw new Error('failed'); return loadTasks(); })
+          .catch(function () {
+            taskMsg.textContent = 'Could not update task. Please try again.';
+            taskMsg.className = 'msg error';
+          });
+      });
+    });
+  }
+
+  addTaskForm.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var name = document.getElementById('task-name-input').value.trim();
+
+    taskMsg.textContent = 'Adding...';
+    taskMsg.className = 'msg muted';
+
+    fetch(API_BASE + '/api/admin/tasks', {
+      method: 'POST',
+      headers: Object.assign({ 'Content-Type': 'application/json' }, authHeaders()),
+      body: JSON.stringify({ name: name })
+    })
+      .then(function (res) { return res.json().then(function (data) { return { status: res.status, data: data }; }); })
+      .then(function (result) {
+        if (result.status === 201) {
+          taskMsg.textContent = 'Task added.';
+          taskMsg.className = 'msg success';
+          addTaskForm.reset();
+          return loadTasks();
+        }
+        if (result.data.error === 'task-exists') {
+          taskMsg.textContent = 'That task already exists.';
+        } else {
+          taskMsg.textContent = 'Please enter a task name.';
+        }
+        taskMsg.className = 'msg error';
+      })
+      .catch(function () {
+        taskMsg.textContent = 'Could not add task. Please try again.';
+        taskMsg.className = 'msg error';
+      });
+  });
+
+  // ---- data loading ----
   function loadBookings() {
+    return fetch(API_BASE + '/api/bookings', { headers: authHeaders() })
+      .then(function (res) {
+        if (res.status === 401) throw new Error('unauthorized');
+        if (!res.ok) throw new Error('server-error');
+        return res.json();
+      })
+      .then(function (data) {
+        state.bookings = data.bookings || [];
+        state.bookingsByDate = {};
+        state.bookings.forEach(function (b) {
+          if (!state.bookingsByDate[b.date]) state.bookingsByDate[b.date] = [];
+          state.bookingsByDate[b.date].push(b);
+        });
+        renderCalendar();
+        if (state.selectedDate) renderDayDetail(state.selectedDate);
+      });
+  }
+
+  function loadCleaners() {
+    return fetch(API_BASE + '/api/admin/cleaners', { headers: authHeaders() })
+      .then(function (res) {
+        if (res.status === 401) throw new Error('unauthorized');
+        if (!res.ok) throw new Error('server-error');
+        return res.json();
+      })
+      .then(function (data) {
+        state.cleaners = data.cleaners || [];
+        renderCleaners();
+        if (state.selectedDate) renderDayDetail(state.selectedDate);
+      });
+  }
+
+  function loadTasks() {
+    return fetch(API_BASE + '/api/admin/tasks', { headers: authHeaders() })
+      .then(function (res) {
+        if (res.status === 401) throw new Error('unauthorized');
+        if (!res.ok) throw new Error('server-error');
+        return res.json();
+      })
+      .then(function (data) {
+        state.tasks = data.tasks || [];
+        renderTasks();
+      });
+  }
+
+  function loadAll() {
     var key = keyInput.value.trim();
     if (!key) {
       statusMsg.textContent = 'Enter the admin key.';
@@ -149,36 +637,24 @@
     localStorage.setItem(STORAGE_KEY, key);
     statusMsg.textContent = 'Loading...';
     statusMsg.className = 'msg muted';
-    tableWrap.innerHTML = '';
 
-    fetch(API_BASE + '/api/bookings', {
-      headers: { 'X-Admin-Key': key }
-    })
-      .then(function (res) {
-        if (res.status === 401) throw new Error('unauthorized');
-        if (!res.ok) throw new Error('server-error');
-        return res.json();
-      })
-      .then(function (data) {
+    Promise.all([loadBookings(), loadCleaners(), loadTasks()])
+      .then(function () {
         statusMsg.textContent = '';
-        renderTable(data.bookings || []);
       })
       .catch(function (err) {
-        if (err.message === 'unauthorized') {
-          statusMsg.textContent = 'Incorrect admin key.';
-        } else {
-          statusMsg.textContent = 'Could not load bookings. Please try again.';
-        }
+        statusMsg.textContent = err.message === 'unauthorized' ? 'Incorrect admin key.' : 'Could not load data. Please try again.';
         statusMsg.className = 'msg error';
       });
   }
 
-  loadBtn.addEventListener('click', loadBookings);
+  loadBtn.addEventListener('click', loadAll);
   keyInput.addEventListener('keydown', function (e) {
-    if (e.key === 'Enter') loadBookings();
+    if (e.key === 'Enter') loadAll();
   });
 
-  if (savedKey) loadBookings();
+  renderCalendar();
+  if (savedKey) loadAll();
 })();
 </script>
 </body>
