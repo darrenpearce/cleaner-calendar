@@ -220,7 +220,7 @@
     <a class="brand" href="index.html">Book<span class="script">clean</span></a>
     <nav>
       <a href="index.html">Book</a>
-      <a href="cleaner.html">Cleaner Login</a>
+      <a href="cleaner.html">Staff Login</a>
       <a href="admin.html" class="active">Admin</a>
     </nav>
   </div>
@@ -237,7 +237,7 @@
 
   <div class="tabs">
     <button class="tab-btn active" data-tab="calendar">Calendar</button>
-    <button class="tab-btn" data-tab="cleaners">Cleaners</button>
+    <button class="tab-btn" data-tab="cleaners">Staff</button>
     <button class="tab-btn" data-tab="tasks">Tasks</button>
   </div>
 
@@ -260,12 +260,12 @@
 
   <div class="tab-panel" id="tab-cleaners">
     <div class="card">
-      <h2>Cleaners</h2>
+      <h2>Staff</h2>
       <div id="cleaners-list"></div>
       <form class="add-form" id="add-cleaner-form">
         <input type="text" id="cleaner-name-input" placeholder="Name" required>
         <input type="text" id="cleaner-pin-input" placeholder="4-6 digit PIN" inputmode="numeric" pattern="\d{4,6}" required>
-        <button type="submit">Add cleaner</button>
+        <button type="submit">Add staff</button>
       </form>
       <p class="msg" id="cleaner-msg"></p>
     </div>
@@ -428,7 +428,7 @@
         '<div class="job-customer">' + escapeHtml(b.name) + ' &middot; ' + escapeHtml(b.email) + '</div>' +
         (tasksHtml ? '<div class="task-tags">' + tasksHtml + '</div>' : '') +
         '<div class="assign-row">' +
-        '<label for="assign-' + b.id + '">Cleaner</label>' +
+        '<label for="assign-' + b.id + '">Staff</label>' +
         '<select id="assign-' + b.id + '" data-id="' + b.id + '">' + cleanerOptionsHtml(b.cleaner_id) + '</select>' +
         '</div>' +
         '</div>';
@@ -474,7 +474,7 @@
   // ---- cleaners ----
   function renderCleaners() {
     if (!state.cleaners.length) {
-      cleanersList.innerHTML = '<p class="msg muted">No cleaners added yet.</p>';
+      cleanersList.innerHTML = '<p class="msg muted">No staff added yet.</p>';
       return;
     }
     cleanersList.innerHTML = state.cleaners.map(function (c) {
@@ -498,20 +498,20 @@
       .then(function (res) { return res.json().then(function (data) { return { status: res.status, data: data }; }); })
       .then(function (result) {
         if (result.status === 201) {
-          cleanerMsg.textContent = 'Cleaner added.';
+          cleanerMsg.textContent = 'Staff member added.';
           cleanerMsg.className = 'msg success';
           addCleanerForm.reset();
           return loadCleaners();
         }
         if (result.data.error === 'cleaner-exists') {
-          cleanerMsg.textContent = 'A cleaner with that name already exists.';
+          cleanerMsg.textContent = 'A staff member with that name already exists.';
         } else {
           cleanerMsg.textContent = 'Please enter a name and a 4-6 digit PIN.';
         }
         cleanerMsg.className = 'msg error';
       })
       .catch(function () {
-        cleanerMsg.textContent = 'Could not add cleaner. Please try again.';
+        cleanerMsg.textContent = 'Could not add staff. Please try again.';
         cleanerMsg.className = 'msg error';
       });
   });
