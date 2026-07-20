@@ -261,7 +261,7 @@
           <button class="ghost" id="cal-next">&rarr;</button>
         </div>
         <div class="month-label" id="cal-month-label"></div>
-        <span style="width:82px"></span>
+        <button class="ghost" id="export-csv-btn">Export CSV</button>
       </div>
       <div class="cal-grid" id="cal-grid"></div>
       <div class="day-detail" id="day-detail">
@@ -559,6 +559,63 @@
     state.monthDate = new Date(state.monthDate.getFullYear(), state.monthDate.getMonth() + 1, 1);
     renderCalendar();
   });
+
+  function csvEscape(value) {
+    var str = value === null || value === undefined ? '' : String(value);
+    if (/[",\r\n]/.test(str)) {
+      str = '"' + str.replace(/"/g, '""') + '"';
+    }
+    return str;
+  }
+
+  function exportMonthCsv() {
+    var monthDate = state.monthDate;
+    var prefix = monthDate.getFullYear() + '-' + pad2(monthDate.getMonth() + 1);
+    var rows = state.bookings
+      .filter(function (b) { return b.date.slice(0, 7) === prefix; })
+      .sort(function (a, b) { return a.date === b.date ? a.time.localeCompare(b.time) : a.date.localeCompare(b.date); });
+
+    if (!rows.length) {
+      window.alert('No bookings found for ' + monthDate.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }) + '.');
+      return;
+    }
+
+    var header = ['Date', 'Time', 'Service', 'Customer', 'Email', 'Phone', 'Address', 'Assigned Cleaner', 'Status', 'Completed At', 'Tasks'];
+    var lines = [header.map(csvEscape).join(',')];
+
+    rows.forEach(function (b) {
+      var status = b.completed_at ? 'Completed' : (b.cleaner_id ? 'Assigned' : 'Unassigned');
+      var tasks = (b.tasks || []).map(function (t) {
+        return t.name + (t.completedAt ? ' (done)' : ' (pending)');
+      }).join('; ');
+
+      lines.push([
+        b.date,
+        b.time,
+        SERVICE_LABELS[b.service] || b.service,
+        b.name,
+        b.email,
+        b.phone,
+        b.address,
+        b.cleaner_name || 'Unassigned',
+        status,
+        b.completed_at || '',
+        tasks
+      ].map(csvEscape).join(','));
+    });
+
+    var blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'bookings-' + prefix + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  document.getElementById('export-csv-btn').addEventListener('click', exportMonthCsv);
 
   // ---- cleaners ----
   function renderCleaners() {
