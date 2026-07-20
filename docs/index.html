@@ -110,12 +110,7 @@
     color: var(--pink);
     margin: 0 0 16px;
   }
-  .service-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-  }
-  .service-btn, .time-btn {
+  .time-btn {
     font-family: 'Quicksand', sans-serif;
     border: 1.5px solid var(--line-2);
     background: #fff;
@@ -128,14 +123,13 @@
     color: var(--ink);
     transition: border-color 0.15s, background 0.15s, transform 0.15s;
   }
-  .service-btn:hover, .time-btn:not(:disabled):hover { border-color: var(--pink); color: var(--pink); }
-  .service-btn.selected, .time-btn.selected {
+  .time-btn:not(:disabled):hover { border-color: var(--pink); color: var(--pink); }
+  .time-btn.selected {
     border-color: var(--pink);
     background: var(--blush-2);
     color: var(--wine);
     font-weight: 700;
   }
-  .service-btn small { display: block; color: var(--muted); font-weight: 400; margin-top: 2px; }
   .time-btn:disabled {
     opacity: 0.4;
     cursor: not-allowed;
@@ -234,7 +228,7 @@
   </div>
 
   <h1>Book your <span class="script">clean</span></h1>
-  <p class="sub">Pick a service, date, and time that works for you.</p>
+  <p class="sub">Pick what you need doing, a date, and a time that works for you.</p>
 
   <div class="card">
     <div class="steps">
@@ -242,54 +236,43 @@
       <div id="step-dot-2"></div>
       <div id="step-dot-3"></div>
       <div id="step-dot-4"></div>
-      <div id="step-dot-5"></div>
     </div>
 
-    <!-- Step 1: Service -->
+    <!-- Step 1: Tasks -->
     <section id="step-1">
-      <h2>1. Choose a service</h2>
-      <div class="service-grid" id="service-grid"></div>
+      <h2>1. What do you need doing?</h2>
+      <div class="task-list" id="task-list"></div>
       <div class="actions">
         <span></span>
         <button class="primary" id="to-step-2" disabled>Next</button>
       </div>
     </section>
 
-    <!-- Step 2: Extra tasks -->
+    <!-- Step 2: Date -->
     <section id="step-2" style="display:none">
-      <h2>2. Extra tasks (optional)</h2>
-      <div class="task-list" id="task-list"></div>
+      <h2>2. Choose a date</h2>
+      <label for="date-input">Date</label>
+      <input type="date" id="date-input">
       <div class="actions">
         <button class="back" id="back-to-1">Back</button>
-        <button class="primary" id="to-step-3">Next</button>
+        <button class="primary" id="to-step-3" disabled>Next</button>
       </div>
     </section>
 
-    <!-- Step 3: Date -->
+    <!-- Step 3: Time -->
     <section id="step-3" style="display:none">
-      <h2>3. Choose a date</h2>
-      <label for="date-input">Date</label>
-      <input type="date" id="date-input">
+      <h2>3. Choose a time</h2>
+      <div class="time-grid" id="time-grid"></div>
+      <p class="msg" id="availability-msg"></p>
       <div class="actions">
         <button class="back" id="back-to-2">Back</button>
         <button class="primary" id="to-step-4" disabled>Next</button>
       </div>
     </section>
 
-    <!-- Step 4: Time -->
+    <!-- Step 4: Details -->
     <section id="step-4" style="display:none">
-      <h2>4. Choose a time</h2>
-      <div class="time-grid" id="time-grid"></div>
-      <p class="msg" id="availability-msg"></p>
-      <div class="actions">
-        <button class="back" id="back-to-3">Back</button>
-        <button class="primary" id="to-step-5" disabled>Next</button>
-      </div>
-    </section>
-
-    <!-- Step 5: Details -->
-    <section id="step-5" style="display:none">
-      <h2>5. Your details</h2>
+      <h2>4. Your details</h2>
       <div class="summary" id="booking-summary"></div>
       <label for="name-input">Name</label>
       <input type="text" id="name-input" autocomplete="name">
@@ -297,13 +280,13 @@
       <input type="email" id="email-input" autocomplete="email">
       <p class="msg" id="submit-msg"></p>
       <div class="actions">
-        <button class="back" id="back-to-4">Back</button>
+        <button class="back" id="back-to-3">Back</button>
         <button class="primary" id="submit-booking">Confirm booking</button>
       </div>
     </section>
 
-    <!-- Step 6: Confirmation -->
-    <section id="step-6" style="display:none">
+    <!-- Step 5: Confirmation -->
+    <section id="step-5" style="display:none">
       <div class="confirmation">
         <div class="icon">&#9989;</div>
         <h2>Booking confirmed</h2>
@@ -318,27 +301,18 @@
   'use strict';
 
   var API_BASE = 'https://cleaner-calendar-production.up.railway.app';
-
-  var SERVICES = [
-    { id: 'standard', label: 'Standard Clean', hint: 'Regular upkeep' },
-    { id: 'deep', label: 'Deep Clean', hint: 'Top to bottom' },
-    { id: 'move', label: 'Move In/Out', hint: 'Empty property' },
-    { id: 'oven', label: 'Oven Clean', hint: 'Oven only' }
-  ];
-
   var TIME_SLOTS = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00'];
 
-  var TOTAL_STEPS = 6;
-  var TOTAL_DOTS = 5;
+  var TOTAL_STEPS = 5;
+  var TOTAL_DOTS = 4;
 
   var state = {
-    service: null,
     taskIds: [],
+    taskNames: [],
     date: null,
     time: null
   };
 
-  var serviceGrid = document.getElementById('service-grid');
   var taskList = document.getElementById('task-list');
   var dateInput = document.getElementById('date-input');
   var timeGrid = document.getElementById('time-grid');
@@ -352,7 +326,6 @@
   var toStep2 = document.getElementById('to-step-2');
   var toStep3 = document.getElementById('to-step-3');
   var toStep4 = document.getElementById('to-step-4');
-  var toStep5 = document.getElementById('to-step-5');
   var submitBtn = document.getElementById('submit-booking');
 
   var todayStr = new Date().toISOString().slice(0, 10);
@@ -368,23 +341,8 @@
     }
   }
 
-  function renderServices() {
-    SERVICES.forEach(function (svc) {
-      var btn = document.createElement('div');
-      btn.className = 'service-btn';
-      btn.innerHTML = svc.label + '<small>' + svc.hint + '</small>';
-      btn.addEventListener('click', function () {
-        state.service = svc;
-        Array.prototype.forEach.call(serviceGrid.children, function (c) { c.classList.remove('selected'); });
-        btn.classList.add('selected');
-        toStep2.disabled = false;
-      });
-      serviceGrid.appendChild(btn);
-    });
-  }
-
   function fetchTasks() {
-    taskList.innerHTML = '<p class="task-empty">Loading extra tasks...</p>';
+    taskList.innerHTML = '<p class="task-empty">Loading...</p>';
     return fetch(API_BASE + '/api/tasks')
       .then(function (res) {
         if (!res.ok) throw new Error('bad-response');
@@ -394,14 +352,30 @@
         renderTasks(data.tasks || []);
       })
       .catch(function () {
-        taskList.innerHTML = '<p class="task-empty">No extra tasks available right now.</p>';
+        taskList.innerHTML = '<p class="task-empty">Could not load services. Please try again.</p>';
       });
+  }
+
+  function toggleTask(task, checked, row) {
+    if (checked) {
+      state.taskIds.push(task.id);
+      state.taskNames.push(task.name);
+      row.classList.add('selected');
+    } else {
+      var idx = state.taskIds.indexOf(task.id);
+      if (idx !== -1) {
+        state.taskIds.splice(idx, 1);
+        state.taskNames.splice(idx, 1);
+      }
+      row.classList.remove('selected');
+    }
+    toStep2.disabled = state.taskIds.length === 0;
   }
 
   function renderTasks(tasks) {
     taskList.innerHTML = '';
     if (!tasks.length) {
-      taskList.innerHTML = '<p class="task-empty">No extra tasks available right now.</p>';
+      taskList.innerHTML = '<p class="task-empty">No services available right now. Please check back later.</p>';
       return;
     }
 
@@ -414,13 +388,7 @@
       checkbox.value = task.id;
 
       checkbox.addEventListener('change', function () {
-        if (checkbox.checked) {
-          state.taskIds.push(task.id);
-          row.classList.add('selected');
-        } else {
-          state.taskIds = state.taskIds.filter(function (id) { return id !== task.id; });
-          row.classList.remove('selected');
-        }
+        toggleTask(task, checkbox.checked, row);
       });
 
       row.appendChild(checkbox);
@@ -433,7 +401,7 @@
     timeGrid.innerHTML = '';
     availabilityMsg.textContent = 'Loading availability...';
     availabilityMsg.className = 'msg';
-    toStep5.disabled = true;
+    toStep4.disabled = true;
 
     return fetch(API_BASE + '/api/availability?date=' + encodeURIComponent(date))
       .then(function (res) {
@@ -454,7 +422,7 @@
   function renderTimeSlots(bookedSlots) {
     timeGrid.innerHTML = '';
     state.time = null;
-    toStep5.disabled = true;
+    toStep4.disabled = true;
 
     TIME_SLOTS.forEach(function (slot) {
       var btn = document.createElement('button');
@@ -469,7 +437,7 @@
           state.time = slot;
           Array.prototype.forEach.call(timeGrid.children, function (c) { c.classList.remove('selected'); });
           btn.classList.add('selected');
-          toStep5.disabled = false;
+          toStep4.disabled = false;
         });
       }
       timeGrid.appendChild(btn);
@@ -478,36 +446,30 @@
 
   function renderSummary() {
     bookingSummary.innerHTML =
-      '<strong>' + state.service.label + '</strong><br>' +
+      '<strong>' + state.taskNames.join(', ') + '</strong><br>' +
       state.date + ' at ' + state.time;
   }
 
-  toStep2.addEventListener('click', function () {
-    showStep(2);
-    fetchTasks();
-  });
+  toStep2.addEventListener('click', function () { showStep(2); });
   document.getElementById('back-to-1').addEventListener('click', function () { showStep(1); });
 
-  toStep3.addEventListener('click', function () { showStep(3); });
-  document.getElementById('back-to-2').addEventListener('click', function () { showStep(2); });
-
   dateInput.addEventListener('change', function () {
-    toStep4.disabled = !dateInput.value;
+    toStep3.disabled = !dateInput.value;
   });
 
-  toStep4.addEventListener('click', function () {
+  toStep3.addEventListener('click', function () {
     state.date = dateInput.value;
-    showStep(4);
+    showStep(3);
     fetchAvailability(state.date);
   });
-  document.getElementById('back-to-3').addEventListener('click', function () { showStep(3); });
+  document.getElementById('back-to-2').addEventListener('click', function () { showStep(2); });
 
-  toStep5.addEventListener('click', function () {
+  toStep4.addEventListener('click', function () {
     renderSummary();
     submitMsg.textContent = '';
-    showStep(5);
+    showStep(4);
   });
-  document.getElementById('back-to-4').addEventListener('click', function () { showStep(4); });
+  document.getElementById('back-to-3').addEventListener('click', function () { showStep(3); });
 
   submitBtn.addEventListener('click', function () {
     var name = nameInput.value.trim();
@@ -529,7 +491,7 @@
       body: JSON.stringify({
         name: name,
         email: email,
-        service: state.service.id,
+        service: state.taskNames.join(', '),
         date: state.date,
         time: state.time,
         taskIds: state.taskIds
@@ -542,14 +504,14 @@
         submitBtn.disabled = false;
         if (result.status === 201) {
           confirmationText.textContent =
-            state.service.label + ' on ' + state.date + ' at ' + state.time + '. A confirmation has been noted for ' + email + '.';
-          showStep(6);
+            state.taskNames.join(', ') + ' on ' + state.date + ' at ' + state.time + '. A confirmation has been noted for ' + email + '.';
+          showStep(5);
           return;
         }
         if (result.status === 409) {
           submitMsg.textContent = 'Sorry, that slot was just taken. Please pick another time.';
           submitMsg.className = 'msg error';
-          showStep(4);
+          showStep(3);
           fetchAvailability(state.date);
           return;
         }
@@ -563,7 +525,7 @@
       });
   });
 
-  renderServices();
+  fetchTasks();
   showStep(1);
 })();
 </script>
