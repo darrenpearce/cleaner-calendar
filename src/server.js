@@ -14,7 +14,7 @@ const ALLOWED_ORIGINS = (
     .split(',')
     .map((origin) => origin.trim());
 
-app.use(cors({ origin: ALLOWED_ORIGINS }));
+app.use(cors({ origin: ALLOWED_ORIGINS, allowedHeaders: ['Content-Type', 'X-Admin-Key'] }));
 app.use(express.json());
 
 app.get('/health', (req, res) => {

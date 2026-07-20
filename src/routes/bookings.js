@@ -1,6 +1,7 @@
 'use strict';
 const express = require('express');
 const db = require('../db/db');
+const requireAdmin = require('../middleware/adminAuth');
 
 const router = express.Router();
 
@@ -37,6 +38,13 @@ router.post('/bookings', (req, res) => {
         console.error(err);
         res.status(500).json({ error: 'server-error' });
     }
+});
+
+router.get('/bookings', requireAdmin, (req, res) => {
+    const rows = db
+        .prepare('SELECT id, name, email, service, date, time, created_at FROM bookings ORDER BY date, time')
+        .all();
+    res.json({ bookings: rows });
 });
 
 module.exports = router;

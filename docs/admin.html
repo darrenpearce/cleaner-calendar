@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bookings Admin</title>
+<style>
+  :root {
+    --brand: #2563eb;
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --border: #e2e8f0;
+    --text: #0f172a;
+    --muted: #64748b;
+    --danger: #dc2626;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 24px 16px 64px;
+  }
+  .wrap { max-width: 900px; margin: 0 auto; }
+  h1 { font-size: 1.5rem; margin: 0 0 16px; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+  .key-row { display: flex; gap: 10px; margin-bottom: 16px; }
+  input[type="password"], input[type="text"] {
+    flex: 1;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.95rem;
+  }
+  button {
+    padding: 10px 18px;
+    border-radius: 8px;
+    border: none;
+    background: var(--brand);
+    color: #fff;
+    cursor: pointer;
+    font-size: 0.95rem;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+  th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted); font-weight: 600; }
+  .msg { font-size: 0.9rem; margin-bottom: 12px; }
+  .msg.error { color: var(--danger); }
+  .msg.muted { color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Bookings</h1>
+  <div class="card">
+    <div class="key-row">
+      <input type="password" id="key-input" placeholder="Admin key">
+      <button id="load-btn">Load bookings</button>
+    </div>
+    <p class="msg" id="status-msg"></p>
+    <div id="table-wrap"></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var API_BASE = 'https://cleaner-calendar-production.up.railway.app';
+  var STORAGE_KEY = 'cleaner-calendar-admin-key';
+
+  var keyInput = document.getElementById('key-input');
+  var loadBtn = document.getElementById('load-btn');
+  var statusMsg = document.getElementById('status-msg');
+  var tableWrap = document.getElementById('table-wrap');
+
+  var savedKey = localStorage.getItem(STORAGE_KEY);
+  if (savedKey) keyInput.value = savedKey;
+
+  function renderTable(bookings) {
+    if (!bookings.length) {
+      tableWrap.innerHTML = '';
+      statusMsg.textContent = 'No bookings yet.';
+      statusMsg.className = 'msg muted';
+      return;
+    }
+
+    var rows = bookings.map(function (b) {
+      return '<tr>' +
+        '<td>' + b.date + '</td>' +
+        '<td>' + b.time + '</td>' +
+        '<td>' + b.service + '</td>' +
+        '<td>' + escapeHtml(b.name) + '</td>' +
+        '<td>' + escapeHtml(b.email) + '</td>' +
+        '<td>' + b.created_at + '</td>' +
+        '</tr>';
+    }).join('');
+
+    tableWrap.innerHTML =
+      '<table><thead><tr>' +
+      '<th>Date</th><th>Time</th><th>Service</th><th>Name</th><th>Email</th><th>Booked at</th>' +
+      '</tr></thead><tbody>' + rows + '</tbody></table>';
+  }
+
+  function escapeHtml(str) {
+    var div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  function loadBookings() {
+    var key = keyInput.value.trim();
+    if (!key) {
+      statusMsg.textContent = 'Enter the admin key.';
+      statusMsg.className = 'msg error';
+      return;
+    }
+
+    localStorage.setItem(STORAGE_KEY, key);
+    statusMsg.textContent = 'Loading...';
+    statusMsg.className = 'msg muted';
+    tableWrap.innerHTML = '';
+
+    fetch(API_BASE + '/api/bookings', {
+      headers: { 'X-Admin-Key': key }
+    })
+      .then(function (res) {
+        if (res.status === 401) throw new Error('unauthorized');
+        if (!res.ok) throw new Error('server-error');
+        return res.json();
+      })
+      .then(function (data) {
+        statusMsg.textContent = '';
+        renderTable(data.bookings || []);
+      })
+      .catch(function (err) {
+        if (err.message === 'unauthorized') {
+          statusMsg.textContent = 'Incorrect admin key.';
+        } else {
+          statusMsg.textContent = 'Could not load bookings. Please try again.';
+        }
+        statusMsg.className = 'msg error';
+      });
+  }
+
+  loadBtn.addEventListener('click', loadBookings);
+  keyInput.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') loadBookings();
+  });
+
+  if (savedKey) loadBookings();
+})();
+</script>
+</body>
+</html>
