@@ -117,6 +117,8 @@
   button.ghost:hover { border-color: var(--pink); color: var(--pink); transform: none; }
   button.ghost.danger { color: var(--danger); }
   button.ghost.danger:hover { border-color: var(--danger); color: var(--danger); }
+  button.ghost.whatsapp-btn { color: var(--success); }
+  button.ghost.whatsapp-btn:hover { border-color: var(--success); color: var(--success); }
   table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
   th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--line); }
   th { font-family: 'Quicksand', sans-serif; color: var(--pink); font-weight: 700; text-transform: uppercase; font-size: 11.5px; letter-spacing: .08em; }
@@ -267,6 +269,7 @@
       <div id="cleaners-list"></div>
       <form class="add-form" id="add-cleaner-form">
         <input type="text" id="cleaner-name-input" placeholder="Name" required>
+        <input type="text" id="cleaner-phone-input" placeholder="Phone" inputmode="tel" required>
         <input type="text" id="cleaner-pin-input" placeholder="4-6 digit PIN" inputmode="numeric" pattern="\d{4,6}" required>
         <button type="submit">Add staff</button>
       </form>
@@ -292,6 +295,7 @@
   'use strict';
 
   var API_BASE = 'https://cleaner-calendar-production.up.railway.app';
+  var SITE_BASE = 'https://darrenpearce.github.io/cleaner-calendar';
   var STORAGE_KEY = 'cleaner-calendar-admin-key';
 
   var SERVICE_LABELS = {
@@ -434,12 +438,17 @@
         '<div class="assign-row">' +
         '<label for="assign-' + b.id + '">Staff</label>' +
         '<select id="assign-' + b.id + '" data-id="' + b.id + '">' + cleanerOptionsHtml(b.cleaner_id) + '</select>' +
+        (b.cleaner_id ? '<button class="ghost whatsapp-btn" data-id="' + b.id + '">Send via WhatsApp</button>' : '') +
         '<button class="ghost danger delete-btn" data-id="' + b.id + '">Delete</button>' +
         '</div>' +
         '</div>';
     });
 
     dayDetail.innerHTML = html;
+
+    dayDetail.querySelectorAll('.whatsapp-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () { sendViaWhatsApp(this.dataset.id); });
+    });
 
     dayDetail.querySelectorAll('select[data-id]').forEach(function (sel) {
       sel.addEventListener('change', function () {
@@ -452,6 +461,39 @@
         deleteBooking(this.dataset.id, key);
       });
     });
+  }
+
+  function whatsappDigits(phone) {
+    var digits = (phone || '').replace(/\D/g, '');
+    if (digits.charAt(0) === '0') digits = '44' + digits.slice(1);
+    return digits;
+  }
+
+  function sendViaWhatsApp(bookingId) {
+    var booking = state.bookings.find(function (b) { return b.id === parseInt(bookingId, 10); });
+    if (!booking) return;
+
+    var cleaner = state.cleaners.find(function (c) { return c.id === booking.cleaner_id; });
+    if (!cleaner || !cleaner.phone) {
+      statusMsg.textContent = 'That staff member has no phone number on file. Add one in the Staff tab.';
+      statusMsg.className = 'msg error';
+      return;
+    }
+
+    var taskNames = (booking.tasks || []).map(function (t) { return t.name; }).join(', ') || booking.service;
+    var lines = [
+      'New job for you:',
+      'Date: ' + booking.date,
+      'Time: ' + booking.time,
+      'Job: ' + taskNames,
+      'Customer: ' + booking.name + ' (' + booking.phone + ')',
+      'Address: ' + booking.address,
+      '',
+      'Check it off here once done: ' + SITE_BASE + '/cleaner.html'
+    ];
+
+    var url = 'https://wa.me/' + whatsappDigits(cleaner.phone) + '?text=' + encodeURIComponent(lines.join('\n'));
+    window.open(url, '_blank');
   }
 
   function deleteBooking(bookingId, key) {
@@ -509,19 +551,49 @@
       return;
     }
     cleanersList.innerHTML = state.cleaners.map(function (c) {
-      return '<div class="list-row"><span>' + escapeHtml(c.name) + '</span>' +
+      return '<div class="list-row"><span>' + escapeHtml(c.name) + (c.phone ? ' &middot; ' + escapeHtml(c.phone) : ' &middot; <span class="msg muted" style="display:inline">no phone</span>') + '</span>' +
         '<span style="display:flex;gap:8px;">' +
+        '<button class="ghost edit-phone-btn" data-id="' + c.id + '" data-name="' + escapeHtml(c.name) + '" data-phone="' + escapeHtml(c.phone) + '">Edit phone</button>' +
         '<button class="ghost reset-pin-btn" data-id="' + c.id + '" data-name="' + escapeHtml(c.name) + '">Reset PIN</button>' +
         '<button class="ghost danger delete-staff-btn" data-id="' + c.id + '" data-name="' + escapeHtml(c.name) + '">Delete</button>' +
         '</span></div>';
     }).join('');
 
+    cleanersList.querySelectorAll('.edit-phone-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () { editPhone(this.dataset.id, this.dataset.name, this.dataset.phone); });
+    });
     cleanersList.querySelectorAll('.reset-pin-btn').forEach(function (btn) {
       btn.addEventListener('click', function () { resetPin(this.dataset.id, this.dataset.name); });
     });
     cleanersList.querySelectorAll('.delete-staff-btn').forEach(function (btn) {
       btn.addEventListener('click', function () { deleteCleaner(this.dataset.id, this.dataset.name); });
     });
+  }
+
+  function editPhone(id, name, currentPhone) {
+    var phone = window.prompt('Phone number for ' + name + ':', currentPhone || '');
+    if (phone === null) return;
+    if (!phone.trim()) {
+      cleanerMsg.textContent = 'Phone number cannot be empty.';
+      cleanerMsg.className = 'msg error';
+      return;
+    }
+
+    fetch(API_BASE + '/api/admin/cleaners/' + id + '/phone', {
+      method: 'PATCH',
+      headers: Object.assign({ 'Content-Type': 'application/json' }, authHeaders()),
+      body: JSON.stringify({ phone: phone.trim() })
+    })
+      .then(function (res) {
+        if (!res.ok) throw new Error('failed');
+        cleanerMsg.textContent = 'Phone updated for ' + name + '.';
+        cleanerMsg.className = 'msg success';
+        return loadCleaners();
+      })
+      .catch(function () {
+        cleanerMsg.textContent = 'Could not update phone. Please try again.';
+        cleanerMsg.className = 'msg error';
+      });
   }
 
   function resetPin(id, name) {
@@ -571,6 +643,7 @@
   addCleanerForm.addEventListener('submit', function (e) {
     e.preventDefault();
     var name = document.getElementById('cleaner-name-input').value.trim();
+    var phone = document.getElementById('cleaner-phone-input').value.trim();
     var pin = document.getElementById('cleaner-pin-input').value.trim();
 
     cleanerMsg.textContent = 'Adding...';
@@ -579,7 +652,7 @@
     fetch(API_BASE + '/api/admin/cleaners', {
       method: 'POST',
       headers: Object.assign({ 'Content-Type': 'application/json' }, authHeaders()),
-      body: JSON.stringify({ name: name, pin: pin })
+      body: JSON.stringify({ name: name, phone: phone, pin: pin })
     })
       .then(function (res) { return res.json().then(function (data) { return { status: res.status, data: data }; }); })
       .then(function (result) {
@@ -592,7 +665,7 @@
         if (result.data.error === 'cleaner-exists') {
           cleanerMsg.textContent = 'A staff member with that name already exists.';
         } else {
-          cleanerMsg.textContent = 'Please enter a name and a 4-6 digit PIN.';
+          cleanerMsg.textContent = 'Please enter a name, phone number, and a 4-6 digit PIN.';
         }
         cleanerMsg.className = 'msg error';
       })

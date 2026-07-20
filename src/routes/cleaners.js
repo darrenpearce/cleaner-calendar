@@ -104,19 +104,21 @@ router.patch('/cleaner/jobs/:id/tasks/:taskId', requireCleaner, (req, res) => {
 
 // ---- admin: manage cleaners ----
 router.get('/admin/cleaners', requireAdmin, (req, res) => {
-    const rows = db.prepare('SELECT id, name, created_at FROM cleaners ORDER BY name').all();
+    const rows = db.prepare('SELECT id, name, phone, created_at FROM cleaners ORDER BY name').all();
     res.json({ cleaners: rows });
 });
 
 router.post('/admin/cleaners', requireAdmin, (req, res) => {
-    const { name, pin } = req.body || {};
-    if (!name || !pin || !/^\d{4,6}$/.test(String(pin))) {
+    const { name, phone, pin } = req.body || {};
+    if (!name || !phone || !pin || !/^\d{4,6}$/.test(String(pin))) {
         return res.status(400).json({ error: 'missing-fields' });
     }
 
     try {
         const pinHash = bcrypt.hashSync(String(pin), 10);
-        const result = db.prepare('INSERT INTO cleaners (name, pin_hash) VALUES (?, ?)').run(name.trim(), pinHash);
+        const result = db
+            .prepare('INSERT INTO cleaners (name, phone, pin_hash) VALUES (?, ?, ?)')
+            .run(name.trim(), phone.trim(), pinHash);
         res.status(201).json({ id: result.lastInsertRowid });
     } catch (err) {
         if (err.code === 'SQLITE_CONSTRAINT_UNIQUE') {
@@ -125,6 +127,19 @@ router.post('/admin/cleaners', requireAdmin, (req, res) => {
         console.error(err);
         res.status(500).json({ error: 'server-error' });
     }
+});
+
+router.patch('/admin/cleaners/:id/phone', requireAdmin, (req, res) => {
+    const { phone } = req.body || {};
+    if (!phone || !phone.trim()) {
+        return res.status(400).json({ error: 'missing-fields' });
+    }
+
+    const result = db.prepare('UPDATE cleaners SET phone = ? WHERE id = ?').run(phone.trim(), req.params.id);
+    if (result.changes === 0) {
+        return res.status(404).json({ error: 'not-found' });
+    }
+    res.json({ ok: true });
 });
 
 router.patch('/admin/cleaners/:id/pin', requireAdmin, (req, res) => {

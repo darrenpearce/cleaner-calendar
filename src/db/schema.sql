@@ -1,6 +1,7 @@
 CREATE TABLE IF NOT EXISTS cleaners (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL UNIQUE,
+  phone TEXT NOT NULL DEFAULT '',
   pin_hash TEXT NOT NULL,
   created_at TEXT DEFAULT (datetime('now'))
 );

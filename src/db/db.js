@@ -26,4 +26,9 @@ if (!bookingColumns.includes('address')) {
     db.exec("ALTER TABLE bookings ADD COLUMN address TEXT NOT NULL DEFAULT ''");
 }
 
+const cleanerColumns = db.prepare("PRAGMA table_info(cleaners)").all().map((c) => c.name);
+if (!cleanerColumns.includes('phone')) {
+    db.exec("ALTER TABLE cleaners ADD COLUMN phone TEXT NOT NULL DEFAULT ''");
+}
+
 module.exports = db;
