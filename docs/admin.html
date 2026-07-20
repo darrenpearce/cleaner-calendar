@@ -164,8 +164,8 @@
   .cal-day.selected { border-color: var(--pink); background: var(--blush-2); }
   .cal-day.today .day-num { color: var(--pink); }
   .cal-day .day-num { font-family: 'Quicksand', sans-serif; font-weight: 700; font-size: 0.85rem; }
+  .cal-day .day-counts { display: flex; gap: 4px; flex-wrap: wrap; }
   .cal-day .day-count {
-    align-self: flex-start;
     background: var(--pink);
     color: #fff;
     font-size: 11px;
@@ -173,6 +173,7 @@
     border-radius: 999px;
     padding: 1px 7px;
   }
+  .cal-day .day-count.completed { background: var(--success); }
 
   .day-detail { border-top: 1px solid var(--line); padding-top: 18px; }
   .job-card {
@@ -389,9 +390,16 @@
       if (key === todayKey) cell.classList.add('today');
       if (key === state.selectedDate) cell.classList.add('selected');
 
-      var count = (state.bookingsByDate[key] || []).length;
+      var dayBookings = state.bookingsByDate[key] || [];
+      var completedCount = dayBookings.filter(function (b) { return !!b.completed_at; }).length;
+      var outstandingCount = dayBookings.length - completedCount;
+
+      var badges = '';
+      if (outstandingCount) badges += '<span class="day-count">' + outstandingCount + '</span>';
+      if (completedCount) badges += '<span class="day-count completed">' + completedCount + '</span>';
+
       cell.innerHTML = '<span class="day-num">' + day + '</span>' +
-        (count ? '<span class="day-count">' + count + '</span>' : '');
+        (badges ? '<div class="day-counts">' + badges + '</div>' : '');
 
       cell.addEventListener('click', function () {
         var k = this.dataset.key;
