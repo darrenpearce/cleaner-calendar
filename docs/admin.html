@@ -24,6 +24,7 @@
     --radius: 18px;
     --danger: #dc2626;
     --success: #16a34a;
+    --info: #38bdf8;
   }
   * { box-sizing: border-box; }
   body {
@@ -173,6 +174,7 @@
     border-radius: 999px;
     padding: 1px 7px;
   }
+  .cal-day .day-count.assigned { background: var(--info); }
   .cal-day .day-count.completed { background: var(--success); }
   .cal-day .day-count.unassigned { background: var(--danger); }
 
@@ -402,7 +404,7 @@
       var assignedCount = dayBookings.length - completedCount - unassignedCount;
 
       var badges = '';
-      if (assignedCount) badges += '<span class="day-count">' + assignedCount + '</span>';
+      if (assignedCount) badges += '<span class="day-count assigned">' + assignedCount + '</span>';
       if (unassignedCount) badges += '<span class="day-count unassigned">' + unassignedCount + '</span>';
       if (completedCount) badges += '<span class="day-count completed">' + completedCount + '</span>';
 
