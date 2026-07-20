@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Book a Cleaning Session</title>
+<style>
+  :root {
+    --brand: #2563eb;
+    --brand-dark: #1d4ed8;
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --border: #e2e8f0;
+    --text: #0f172a;
+    --muted: #64748b;
+    --danger: #dc2626;
+    --success: #16a34a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 24px 16px 64px;
+  }
+  .wrap { max-width: 560px; margin: 0 auto; }
+  h1 { font-size: 1.5rem; margin: 0 0 4px; }
+  p.sub { color: var(--muted); margin: 0 0 24px; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+  .steps {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+  .steps div {
+    flex: 1;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--border);
+  }
+  .steps div.active { background: var(--brand); }
+  .steps div.done { background: var(--brand); opacity: 0.5; }
+  h2 { font-size: 1.1rem; margin: 0 0 16px; }
+  .service-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .service-btn, .time-btn {
+    border: 1px solid var(--border);
+    background: #fff;
+    border-radius: 10px;
+    padding: 14px 10px;
+    text-align: center;
+    cursor: pointer;
+    font-size: 0.95rem;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .service-btn:hover, .time-btn:not(:disabled):hover { border-color: var(--brand); }
+  .service-btn.selected, .time-btn.selected {
+    border-color: var(--brand);
+    background: #eff6ff;
+    color: var(--brand-dark);
+    font-weight: 600;
+  }
+  .service-btn small { display: block; color: var(--muted); font-weight: 400; margin-top: 2px; }
+  .time-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    text-decoration: line-through;
+  }
+  input[type="date"], input[type="text"], input[type="email"] {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 1rem;
+    margin-bottom: 14px;
+  }
+  label { font-size: 0.9rem; color: var(--muted); display: block; margin-bottom: 6px; }
+  .time-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+  .actions {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 20px;
+    gap: 10px;
+  }
+  button.primary, button.back {
+    padding: 12px 20px;
+    border-radius: 8px;
+    border: none;
+    font-size: 1rem;
+    cursor: pointer;
+  }
+  button.primary {
+    background: var(--brand);
+    color: #fff;
+    flex: 1;
+  }
+  button.primary:disabled { background: #93b8f5; cursor: not-allowed; }
+  button.back {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border);
+  }
+  .msg { margin-top: 14px; font-size: 0.9rem; }
+  .msg.error { color: var(--danger); }
+  .msg.success { color: var(--success); }
+  .summary {
+    background: #f1f5f9;
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-size: 0.9rem;
+    margin-bottom: 16px;
+    line-height: 1.6;
+  }
+  .confirmation { text-align: center; padding: 20px 0; }
+  .confirmation .icon { font-size: 2.5rem; margin-bottom: 8px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Book a Cleaning Session</h1>
+  <p class="sub">Pick a service, date, and time that works for you.</p>
+
+  <div class="card">
+    <div class="steps">
+      <div id="step-dot-1" class="active"></div>
+      <div id="step-dot-2"></div>
+      <div id="step-dot-3"></div>
+      <div id="step-dot-4"></div>
+    </div>
+
+    <!-- Step 1: Service -->
+    <section id="step-1">
+      <h2>1. Choose a service</h2>
+      <div class="service-grid" id="service-grid"></div>
+      <div class="actions">
+        <span></span>
+        <button class="primary" id="to-step-2" disabled>Next</button>
+      </div>
+    </section>
+
+    <!-- Step 2: Date -->
+    <section id="step-2" style="display:none">
+      <h2>2. Choose a date</h2>
+      <label for="date-input">Date</label>
+      <input type="date" id="date-input">
+      <div class="actions">
+        <button class="back" id="back-to-1">Back</button>
+        <button class="primary" id="to-step-3" disabled>Next</button>
+      </div>
+    </section>
+
+    <!-- Step 3: Time -->
+    <section id="step-3" style="display:none">
+      <h2>3. Choose a time</h2>
+      <div class="time-grid" id="time-grid"></div>
+      <p class="msg" id="availability-msg"></p>
+      <div class="actions">
+        <button class="back" id="back-to-2">Back</button>
+        <button class="primary" id="to-step-4" disabled>Next</button>
+      </div>
+    </section>
+
+    <!-- Step 4: Details -->
+    <section id="step-4" style="display:none">
+      <h2>4. Your details</h2>
+      <div class="summary" id="booking-summary"></div>
+      <label for="name-input">Name</label>
+      <input type="text" id="name-input" autocomplete="name">
+      <label for="email-input">Email</label>
+      <input type="email" id="email-input" autocomplete="email">
+      <p class="msg" id="submit-msg"></p>
+      <div class="actions">
+        <button class="back" id="back-to-3">Back</button>
+        <button class="primary" id="submit-booking">Confirm booking</button>
+      </div>
+    </section>
+
+    <!-- Step 5: Confirmation -->
+    <section id="step-5" style="display:none">
+      <div class="confirmation">
+        <div class="icon">&#9989;</div>
+        <h2>Booking confirmed</h2>
+        <p id="confirmation-text" class="sub"></p>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var API_BASE = 'https://cleaner-calendar-production.up.railway.app';
+
+  var SERVICES = [
+    { id: 'standard', label: 'Standard Clean', hint: 'Regular upkeep' },
+    { id: 'deep', label: 'Deep Clean', hint: 'Top to bottom' },
+    { id: 'move', label: 'Move In/Out', hint: 'Empty property' },
+    { id: 'oven', label: 'Oven Clean', hint: 'Oven only' }
+  ];
+
+  var TIME_SLOTS = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00'];
+
+  var state = {
+    service: null,
+    date: null,
+    time: null
+  };
+
+  var serviceGrid = document.getElementById('service-grid');
+  var dateInput = document.getElementById('date-input');
+  var timeGrid = document.getElementById('time-grid');
+  var availabilityMsg = document.getElementById('availability-msg');
+  var bookingSummary = document.getElementById('booking-summary');
+  var nameInput = document.getElementById('name-input');
+  var emailInput = document.getElementById('email-input');
+  var submitMsg = document.getElementById('submit-msg');
+  var confirmationText = document.getElementById('confirmation-text');
+
+  var toStep2 = document.getElementById('to-step-2');
+  var toStep3 = document.getElementById('to-step-3');
+  var toStep4 = document.getElementById('to-step-4');
+  var submitBtn = document.getElementById('submit-booking');
+
+  var todayStr = new Date().toISOString().slice(0, 10);
+  dateInput.min = todayStr;
+
+  function showStep(n) {
+    for (var i = 1; i <= 5; i++) {
+      document.getElementById('step-' + i).style.display = (i === n) ? 'block' : 'none';
+    }
+    for (var d = 1; d <= 4; d++) {
+      var dot = document.getElementById('step-dot-' + d);
+      dot.className = d < n ? 'done' : (d === n ? 'active' : '');
+    }
+  }
+
+  function renderServices() {
+    SERVICES.forEach(function (svc) {
+      var btn = document.createElement('div');
+      btn.className = 'service-btn';
+      btn.innerHTML = svc.label + '<small>' + svc.hint + '</small>';
+      btn.addEventListener('click', function () {
+        state.service = svc;
+        Array.prototype.forEach.call(serviceGrid.children, function (c) { c.classList.remove('selected'); });
+        btn.classList.add('selected');
+        toStep2.disabled = false;
+      });
+      serviceGrid.appendChild(btn);
+    });
+  }
+
+  function fetchAvailability(date) {
+    timeGrid.innerHTML = '';
+    availabilityMsg.textContent = 'Loading availability...';
+    availabilityMsg.className = 'msg';
+    toStep4.disabled = true;
+
+    return fetch(API_BASE + '/api/availability?date=' + encodeURIComponent(date))
+      .then(function (res) {
+        if (!res.ok) throw new Error('bad-response');
+        return res.json();
+      })
+      .then(function (data) {
+        var booked = data.bookedSlots || [];
+        availabilityMsg.textContent = '';
+        renderTimeSlots(booked);
+      })
+      .catch(function () {
+        availabilityMsg.textContent = 'Could not load availability. Please try again.';
+        availabilityMsg.className = 'msg error';
+      });
+  }
+
+  function renderTimeSlots(bookedSlots) {
+    timeGrid.innerHTML = '';
+    state.time = null;
+    toStep4.disabled = true;
+
+    TIME_SLOTS.forEach(function (slot) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'time-btn';
+      btn.textContent = slot;
+      var isBooked = bookedSlots.indexOf(slot) !== -1;
+      if (isBooked) {
+        btn.disabled = true;
+      } else {
+        btn.addEventListener('click', function () {
+          state.time = slot;
+          Array.prototype.forEach.call(timeGrid.children, function (c) { c.classList.remove('selected'); });
+          btn.classList.add('selected');
+          toStep4.disabled = false;
+        });
+      }
+      timeGrid.appendChild(btn);
+    });
+  }
+
+  function renderSummary() {
+    bookingSummary.innerHTML =
+      '<strong>' + state.service.label + '</strong><br>' +
+      state.date + ' at ' + state.time;
+  }
+
+  toStep2.addEventListener('click', function () { showStep(2); });
+  document.getElementById('back-to-1').addEventListener('click', function () { showStep(1); });
+
+  dateInput.addEventListener('change', function () {
+    toStep3.disabled = !dateInput.value;
+  });
+
+  toStep3.addEventListener('click', function () {
+    state.date = dateInput.value;
+    showStep(3);
+    fetchAvailability(state.date);
+  });
+  document.getElementById('back-to-2').addEventListener('click', function () { showStep(2); });
+
+  toStep4.addEventListener('click', function () {
+    renderSummary();
+    submitMsg.textContent = '';
+    showStep(4);
+  });
+  document.getElementById('back-to-3').addEventListener('click', function () { showStep(3); });
+
+  submitBtn.addEventListener('click', function () {
+    var name = nameInput.value.trim();
+    var email = emailInput.value.trim();
+
+    if (!name || !email) {
+      submitMsg.textContent = 'Please enter your name and email.';
+      submitMsg.className = 'msg error';
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitMsg.textContent = 'Booking...';
+    submitMsg.className = 'msg';
+
+    fetch(API_BASE + '/api/bookings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: name,
+        email: email,
+        service: state.service.id,
+        date: state.date,
+        time: state.time
+      })
+    })
+      .then(function (res) {
+        return res.json().then(function (data) { return { status: res.status, data: data }; });
+      })
+      .then(function (result) {
+        submitBtn.disabled = false;
+        if (result.status === 201) {
+          confirmationText.textContent =
+            state.service.label + ' on ' + state.date + ' at ' + state.time + '. A confirmation has been noted for ' + email + '.';
+          showStep(5);
+          return;
+        }
+        if (result.status === 409) {
+          submitMsg.textContent = 'Sorry, that slot was just taken. Please pick another time.';
+          submitMsg.className = 'msg error';
+          showStep(3);
+          fetchAvailability(state.date);
+          return;
+        }
+        submitMsg.textContent = 'Something went wrong. Please try again.';
+        submitMsg.className = 'msg error';
+      })
+      .catch(function () {
+        submitBtn.disabled = false;
+        submitMsg.textContent = 'Network error. Please check your connection and try again.';
+        submitMsg.className = 'msg error';
+      });
+  });
+
+  renderServices();
+  showStep(1);
+})();
+</script>
+</body>
+</html>
