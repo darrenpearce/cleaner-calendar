@@ -169,6 +169,28 @@
     grid-template-columns: repeat(3, 1fr);
     gap: 10px;
   }
+  .repeat-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .repeat-option {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--ink);
+    border: 1.5px solid var(--line-2);
+    border-radius: 999px;
+    padding: 7px 14px;
+    cursor: pointer;
+    margin-bottom: 0;
+  }
+  .repeat-option input { accent-color: var(--pink); margin: 0; }
+  .repeat-option:has(input:checked) { border-color: var(--pink); background: var(--blush-2); color: var(--wine); }
   .actions {
     display: flex;
     justify-content: space-between;
@@ -253,6 +275,14 @@
       <h2>2. Choose a date</h2>
       <label for="date-input">Date</label>
       <input type="date" id="date-input">
+      <label>Repeat</label>
+      <div class="repeat-options" id="repeat-options">
+        <label class="repeat-option"><input type="radio" name="repeat" value="none" checked> One-off</label>
+        <label class="repeat-option"><input type="radio" name="repeat" value="weekly"> Weekly</label>
+        <label class="repeat-option"><input type="radio" name="repeat" value="biweekly"> Bi-weekly</label>
+        <label class="repeat-option"><input type="radio" name="repeat" value="monthly"> Monthly</label>
+        <label class="repeat-option"><input type="radio" name="repeat" value="yearly"> Yearly</label>
+      </div>
       <div class="actions">
         <button class="back" id="back-to-1">Back</button>
         <button class="primary" id="to-step-3" disabled>Next</button>
@@ -310,11 +340,20 @@
   var TOTAL_STEPS = 5;
   var TOTAL_DOTS = 4;
 
+  var REPEAT_LABELS = {
+    none: 'One-off',
+    weekly: 'Weekly',
+    biweekly: 'Bi-weekly',
+    monthly: 'Monthly',
+    yearly: 'Yearly'
+  };
+
   var state = {
     taskIds: [],
     taskNames: [],
     date: null,
-    time: null
+    time: null,
+    repeat: 'none'
   };
 
   var taskList = document.getElementById('task-list');
@@ -453,11 +492,18 @@
   function renderSummary() {
     bookingSummary.innerHTML =
       '<strong>' + state.taskNames.join(', ') + '</strong><br>' +
-      state.date + ' at ' + state.time;
+      state.date + ' at ' + state.time +
+      (state.repeat !== 'none' ? '<br>Repeats: ' + REPEAT_LABELS[state.repeat] : '');
   }
 
   toStep2.addEventListener('click', function () { showStep(2); });
   document.getElementById('back-to-1').addEventListener('click', function () { showStep(1); });
+
+  document.querySelectorAll('input[name="repeat"]').forEach(function (radio) {
+    radio.addEventListener('change', function () {
+      if (radio.checked) state.repeat = radio.value;
+    });
+  });
 
   dateInput.addEventListener('change', function () {
     toStep3.disabled = !dateInput.value;
@@ -504,7 +550,8 @@
         service: state.taskNames.join(', '),
         date: state.date,
         time: state.time,
-        taskIds: state.taskIds
+        taskIds: state.taskIds,
+        repeat: state.repeat
       })
     })
       .then(function (res) {
@@ -513,8 +560,15 @@
       .then(function (result) {
         submitBtn.disabled = false;
         if (result.status === 201) {
-          confirmationText.textContent =
-            state.taskNames.join(', ') + ' on ' + state.date + ' at ' + state.time + '. A confirmation has been noted for ' + email + '.';
+          var text = state.taskNames.join(', ') + ' on ' + state.date + ' at ' + state.time + '. A confirmation has been noted for ' + email + '.';
+          var bookedCount = result.data.bookedCount || 1;
+          if (state.repeat !== 'none') {
+            text += ' ' + bookedCount + ' ' + REPEAT_LABELS[state.repeat].toLowerCase() + ' session' + (bookedCount === 1 ? '' : 's') + ' booked.';
+          }
+          if (result.data.skippedDates && result.data.skippedDates.length) {
+            text += ' ' + result.data.skippedDates.length + ' date(s) were already taken and skipped: ' + result.data.skippedDates.join(', ') + '.';
+          }
+          confirmationText.textContent = text;
           showStep(5);
           return;
         }

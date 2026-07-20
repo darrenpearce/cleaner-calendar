@@ -6,16 +6,46 @@ const requireAdmin = require('../middleware/adminAuth');
 const router = express.Router();
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const REPEAT_OPTIONS = ['none', 'weekly', 'biweekly', 'monthly', 'yearly'];
+const REPEAT_OCCURRENCES = 26;
 
-const insertBookingWithTasks = db.transaction((name, email, phone, address, service, date, time, taskIds) => {
-    const result = db
-        .prepare('INSERT INTO bookings (name, email, phone, address, service, date, time) VALUES (?, ?, ?, ?, ?, ?, ?)')
-        .run(name, email, phone, address, service, date, time);
+function occurrenceDate(startDate, repeat, index) {
+    const d = new Date(startDate + 'T00:00:00');
+    if (repeat === 'weekly') d.setDate(d.getDate() + 7 * index);
+    else if (repeat === 'biweekly') d.setDate(d.getDate() + 14 * index);
+    else if (repeat === 'monthly') d.setMonth(d.getMonth() + index);
+    else if (repeat === 'yearly') d.setFullYear(d.getFullYear() + index);
+    return d.toISOString().slice(0, 10);
+}
 
+const insertBookingSeries = db.transaction((name, email, phone, address, service, date, time, taskIds, repeat) => {
+    const insertBooking = db.prepare(
+        'INSERT INTO bookings (name, email, phone, address, service, date, time) VALUES (?, ?, ?, ?, ?, ?, ?)'
+    );
     const insertTask = db.prepare('INSERT INTO booking_tasks (booking_id, task_id) VALUES (?, ?)');
-    taskIds.forEach((taskId) => insertTask.run(result.lastInsertRowid, taskId));
 
-    return result.lastInsertRowid;
+    const count = repeat === 'none' ? 1 : REPEAT_OCCURRENCES;
+    let firstId = null;
+    let bookedCount = 0;
+    const skippedDates = [];
+
+    for (let i = 0; i < count; i++) {
+        const occDate = occurrenceDate(date, repeat, i);
+        try {
+            const result = insertBooking.run(name, email, phone, address, service, occDate, time);
+            taskIds.forEach((taskId) => insertTask.run(result.lastInsertRowid, taskId));
+            if (firstId === null) firstId = result.lastInsertRowid;
+            bookedCount++;
+        } catch (err) {
+            if (err.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+                skippedDates.push(occDate);
+            } else {
+                throw err;
+            }
+        }
+    }
+
+    return { firstId, bookedCount, skippedDates };
 });
 
 const deleteBooking = db.transaction((id) => {
@@ -34,7 +64,7 @@ router.get('/availability', (req, res) => {
 });
 
 router.post('/bookings', (req, res) => {
-    const { name, email, phone, address, service, date, time, taskIds } = req.body || {};
+    const { name, email, phone, address, service, date, time, taskIds, repeat } = req.body || {};
     if (!name || !email || !phone || !address || !service || !date || !time) {
         return res.status(400).json({ error: 'missing-fields' });
     }
@@ -42,15 +72,16 @@ router.post('/bookings', (req, res) => {
         return res.status(400).json({ error: 'invalid-date' });
     }
 
+    const repeatValue = REPEAT_OPTIONS.includes(repeat) ? repeat : 'none';
     const cleanTaskIds = Array.isArray(taskIds) ? taskIds.filter((id) => Number.isInteger(id)) : [];
 
     try {
-        const id = insertBookingWithTasks(name, email, phone, address, service, date, time, cleanTaskIds);
-        res.status(201).json({ id });
-    } catch (err) {
-        if (err.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+        const result = insertBookingSeries(name, email, phone, address, service, date, time, cleanTaskIds, repeatValue);
+        if (result.bookedCount === 0) {
             return res.status(409).json({ error: 'slot-taken' });
         }
+        res.status(201).json({ id: result.firstId, bookedCount: result.bookedCount, skippedDates: result.skippedDates });
+    } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'server-error' });
     }
