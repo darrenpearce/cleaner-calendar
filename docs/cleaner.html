@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Staff Login</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="logo-mark.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700&family=Quicksand:wght@500;600;700&family=Parisienne&display=swap" rel="stylesheet">
@@ -45,7 +47,8 @@
     margin-bottom: 20px;
     box-shadow: var(--shadow-sm);
   }
-  .site-nav .brand { font-family: 'Quicksand', sans-serif; font-weight: 700; font-size: 1.05rem; color: var(--ink); text-decoration: none; }
+  .site-nav .brand { display: flex; align-items: center; gap: 8px; font-family: 'Quicksand', sans-serif; font-weight: 700; font-size: 1.05rem; color: var(--ink); text-decoration: none; }
+  .site-nav .brand img { width: 30px; height: 30px; border-radius: 50%; }
   .site-nav .brand .script { font-family: 'Parisienne', cursive; color: var(--pink); font-size: 1.3em; }
   .site-nav nav { display: flex; gap: 4px; }
   .site-nav nav a {
@@ -183,7 +186,7 @@
 <body>
 <div class="wrap">
   <div class="site-nav">
-    <a class="brand" href="index.html">Book<span class="script">clean</span></a>
+    <a class="brand" href="index.html"><img src="logo-mark.png" alt="">Book<span class="script">clean</span></a>
     <nav>
       <a href="index.html">Book</a>
       <a href="cleaner.html" class="active">Staff Login</a>

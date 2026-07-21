@@ -10,6 +10,7 @@ const router = express.Router();
 
 const TOKEN_TTL = '14d';
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const MONTH_RE = /^\d{4}-\d{2}$/;
 
 function attachTasks(bookings) {
     if (!bookings.length) return bookings;
@@ -138,6 +139,18 @@ router.get('/admin/unavailability', requireAdmin, (req, res) => {
 
     const rows = db.prepare('SELECT cleaner_id FROM cleaner_unavailability WHERE date = ?').all(date);
     res.json({ cleanerIds: rows.map((r) => r.cleaner_id) });
+});
+
+router.get('/admin/unavailability/month', requireAdmin, (req, res) => {
+    const { month } = req.query;
+    if (!month || !MONTH_RE.test(month)) {
+        return res.status(400).json({ error: 'invalid-month' });
+    }
+
+    const rows = db
+        .prepare('SELECT cleaner_id AS cleanerId, date FROM cleaner_unavailability WHERE date LIKE ? ORDER BY date')
+        .all(month + '-%');
+    res.json({ entries: rows });
 });
 
 router.post('/admin/cleaners', requireAdmin, (req, res) => {
