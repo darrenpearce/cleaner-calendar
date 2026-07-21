@@ -401,12 +401,20 @@
       });
   }
 
-  function selectTask(task, row) {
-    taskList.querySelectorAll('.task-row').forEach(function (r) { r.classList.remove('selected'); });
-    row.classList.add('selected');
-    state.taskIds = [task.id];
-    state.taskNames = [task.name];
-    toStep2.disabled = false;
+  function toggleTask(task, checked, row) {
+    if (checked) {
+      state.taskIds.push(task.id);
+      state.taskNames.push(task.name);
+      row.classList.add('selected');
+    } else {
+      var idx = state.taskIds.indexOf(task.id);
+      if (idx !== -1) {
+        state.taskIds.splice(idx, 1);
+        state.taskNames.splice(idx, 1);
+      }
+      row.classList.remove('selected');
+    }
+    toStep2.disabled = state.taskIds.length === 0;
   }
 
   function renderTasks(tasks) {
@@ -420,16 +428,15 @@
       var row = document.createElement('label');
       row.className = 'task-row';
 
-      var radio = document.createElement('input');
-      radio.type = 'radio';
-      radio.name = 'task-choice';
-      radio.value = task.id;
+      var checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.value = task.id;
 
-      radio.addEventListener('change', function () {
-        if (radio.checked) selectTask(task, row);
+      checkbox.addEventListener('change', function () {
+        toggleTask(task, checkbox.checked, row);
       });
 
-      row.appendChild(radio);
+      row.appendChild(checkbox);
       row.appendChild(document.createTextNode(task.name));
       taskList.appendChild(row);
     });

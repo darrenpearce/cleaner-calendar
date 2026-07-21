@@ -116,6 +116,9 @@
     cursor: pointer;
   }
   button.ghost:hover { border-color: var(--pink); color: var(--pink); }
+  button.ghost:disabled { opacity: 0.5; cursor: not-allowed; }
+  button.ghost:disabled:hover { border-color: var(--line-2); color: var(--ink); }
+  .job-actions .hint { display: block; margin-top: 6px; font-size: 0.8rem; color: var(--muted); }
   .msg { font-size: 0.9rem; margin-top: 10px; }
   .msg.error { color: var(--danger); }
   .msg.muted { color: var(--muted); }
@@ -317,11 +320,21 @@
 
     jobsList.innerHTML = jobs.map(function (job) {
       var isDone = !!job.completed_at;
-      var tasksHtml = (job.tasks || []).map(function (t) {
+      var tasks = job.tasks || [];
+      var allTasksTicked = tasks.every(function (t) { return !!t.completedAt; });
+      var tasksHtml = tasks.map(function (t) {
         return '<label class="' + (t.completedAt ? 'done' : '') + '">' +
           '<input type="checkbox" data-job="' + job.id + '" data-task="' + t.id + '"' + (t.completedAt ? ' checked' : '') + (isDone ? ' disabled' : '') + '>' +
           escapeHtml(t.name) + '</label>';
       }).join('');
+
+      var actionsHtml = '';
+      if (!isDone) {
+        actionsHtml = '<div class="job-actions">' +
+          '<button class="ghost complete-btn" data-job-id="' + job.id + '"' + (allTasksTicked ? '' : ' disabled') + '>Mark job complete</button>' +
+          (allTasksTicked ? '' : '<span class="hint">Tick off all tasks above to complete this job</span>') +
+          '</div>';
+      }
 
       return '<div class="job-card' + (isDone ? ' completed' : '') + '" data-job-id="' + job.id + '">' +
         '<div class="job-top">' +
@@ -332,7 +345,7 @@
         '<div class="job-customer">' + escapeHtml(job.name) + ' &middot; <a href="tel:' + encodeURIComponent(job.phone) + '">' + escapeHtml(job.phone) + '</a></div>' +
         '<div class="job-customer"><a href="https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(job.address) + '" target="_blank" rel="noopener">' + escapeHtml(job.address) + '</a></div>' +
         (tasksHtml ? '<div class="task-checklist">' + tasksHtml + '</div>' : '') +
-        (isDone ? '' : '<div class="job-actions"><button class="ghost complete-btn" data-job-id="' + job.id + '">Mark job complete</button></div>') +
+        actionsHtml +
         '</div>';
     }).join('');
 
