@@ -46,4 +46,12 @@ router.patch('/admin/tasks/:id', requireAdmin, (req, res) => {
     res.json({ ok: true });
 });
 
+router.delete('/admin/tasks/:id', requireAdmin, (req, res) => {
+    const result = db.prepare('DELETE FROM tasks WHERE id = ?').run(req.params.id);
+    if (result.changes === 0) {
+        return res.status(404).json({ error: 'not-found' });
+    }
+    res.json({ ok: true });
+});
+
 module.exports = router;

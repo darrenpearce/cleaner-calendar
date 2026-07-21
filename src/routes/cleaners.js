@@ -9,6 +9,7 @@ const requireCleaner = require('../middleware/cleanerAuth');
 const router = express.Router();
 
 const TOKEN_TTL = '14d';
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 function attachTasks(bookings) {
     if (!bookings.length) return bookings;
@@ -16,9 +17,8 @@ function attachTasks(bookings) {
     const placeholders = ids.map(() => '?').join(',');
     const taskRows = db
         .prepare(
-            `SELECT bt.booking_id, t.id, t.name, bt.completed_at
-             FROM booking_tasks bt JOIN tasks t ON t.id = bt.task_id
-             WHERE bt.booking_id IN (${placeholders})`
+            `SELECT booking_id, task_id AS id, name, completed_at
+             FROM booking_tasks WHERE booking_id IN (${placeholders})`
         )
         .all(...ids);
 
@@ -102,10 +102,42 @@ router.patch('/cleaner/jobs/:id/tasks/:taskId', requireCleaner, (req, res) => {
     res.json({ ok: true });
 });
 
+router.get('/cleaner/unavailability', requireCleaner, (req, res) => {
+    const rows = db
+        .prepare('SELECT date FROM cleaner_unavailability WHERE cleaner_id = ? ORDER BY date')
+        .all(req.cleaner.id);
+    res.json({ dates: rows.map((r) => r.date) });
+});
+
+router.post('/cleaner/unavailability', requireCleaner, (req, res) => {
+    const { date } = req.body || {};
+    if (!date || !DATE_RE.test(date)) {
+        return res.status(400).json({ error: 'invalid-date' });
+    }
+
+    db.prepare('INSERT OR IGNORE INTO cleaner_unavailability (cleaner_id, date) VALUES (?, ?)').run(req.cleaner.id, date);
+    res.status(201).json({ ok: true });
+});
+
+router.delete('/cleaner/unavailability/:date', requireCleaner, (req, res) => {
+    db.prepare('DELETE FROM cleaner_unavailability WHERE cleaner_id = ? AND date = ?').run(req.cleaner.id, req.params.date);
+    res.json({ ok: true });
+});
+
 // ---- admin: manage cleaners ----
 router.get('/admin/cleaners', requireAdmin, (req, res) => {
     const rows = db.prepare('SELECT id, name, phone, created_at FROM cleaners ORDER BY name').all();
     res.json({ cleaners: rows });
+});
+
+router.get('/admin/unavailability', requireAdmin, (req, res) => {
+    const { date } = req.query;
+    if (!date || !DATE_RE.test(date)) {
+        return res.status(400).json({ error: 'invalid-date' });
+    }
+
+    const rows = db.prepare('SELECT cleaner_id FROM cleaner_unavailability WHERE date = ?').all(date);
+    res.json({ cleanerIds: rows.map((r) => r.cleaner_id) });
 });
 
 router.post('/admin/cleaners', requireAdmin, (req, res) => {
@@ -158,6 +190,7 @@ router.patch('/admin/cleaners/:id/pin', requireAdmin, (req, res) => {
 
 const deleteCleaner = db.transaction((id) => {
     db.prepare('UPDATE bookings SET cleaner_id = NULL WHERE cleaner_id = ?').run(id);
+    db.prepare('DELETE FROM cleaner_unavailability WHERE cleaner_id = ?').run(id);
     return db.prepare('DELETE FROM cleaners WHERE id = ?').run(id);
 });
 

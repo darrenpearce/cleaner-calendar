@@ -454,9 +454,12 @@
         return res.json();
       })
       .then(function (data) {
-        var booked = data.bookedSlots || [];
         availabilityMsg.textContent = '';
-        renderTimeSlots(booked);
+        if (!data.capacity) {
+          availabilityMsg.textContent = 'No staff available for this date. Please choose another date.';
+          availabilityMsg.className = 'msg error';
+        }
+        renderTimeSlots(data.capacity || 0, data.bookedCounts || {});
       })
       .catch(function () {
         availabilityMsg.textContent = 'Could not load availability. Please try again.';
@@ -464,7 +467,7 @@
       });
   }
 
-  function renderTimeSlots(bookedSlots) {
+  function renderTimeSlots(capacity, bookedCounts) {
     timeGrid.innerHTML = '';
     state.time = null;
     toStep4.disabled = true;
@@ -474,8 +477,8 @@
       btn.type = 'button';
       btn.className = 'time-btn';
       btn.textContent = slot;
-      var isBooked = bookedSlots.indexOf(slot) !== -1;
-      if (isBooked) {
+      var isFull = (bookedCounts[slot] || 0) >= capacity;
+      if (isFull) {
         btn.disabled = true;
       } else {
         btn.addEventListener('click', function () {

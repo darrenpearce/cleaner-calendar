@@ -31,4 +31,37 @@ if (!cleanerColumns.includes('phone')) {
     db.exec("ALTER TABLE cleaners ADD COLUMN phone TEXT NOT NULL DEFAULT ''");
 }
 
+const bookingsTableSql = db.prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'bookings'").get();
+if (bookingsTableSql && /UNIQUE\s*\(\s*date\s*,\s*time\s*\)/i.test(bookingsTableSql.sql)) {
+    db.exec(`
+        CREATE TABLE bookings_rebuild (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL,
+          email TEXT NOT NULL,
+          phone TEXT NOT NULL,
+          address TEXT NOT NULL,
+          service TEXT NOT NULL,
+          date TEXT NOT NULL,
+          time TEXT NOT NULL,
+          cleaner_id INTEGER,
+          completed_at TEXT,
+          created_at TEXT DEFAULT (datetime('now'))
+        );
+        INSERT INTO bookings_rebuild (id, name, email, phone, address, service, date, time, cleaner_id, completed_at, created_at)
+          SELECT id, name, email, phone, address, service, date, time, cleaner_id, completed_at, created_at FROM bookings;
+        DROP TABLE bookings;
+        ALTER TABLE bookings_rebuild RENAME TO bookings;
+    `);
+}
+
+const bookingTaskColumns = db.prepare("PRAGMA table_info(booking_tasks)").all().map((c) => c.name);
+if (!bookingTaskColumns.includes('name')) {
+    db.exec("ALTER TABLE booking_tasks ADD COLUMN name TEXT NOT NULL DEFAULT ''");
+    db.exec(`
+        UPDATE booking_tasks
+        SET name = COALESCE((SELECT t.name FROM tasks t WHERE t.id = booking_tasks.task_id), '')
+        WHERE name = ''
+    `);
+}
+
 module.exports = db;

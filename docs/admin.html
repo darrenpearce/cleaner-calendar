@@ -336,7 +336,9 @@
     cleaners: [],
     tasks: [],
     monthDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
-    selectedDate: null
+    selectedDate: null,
+    unavailableDate: null,
+    unavailableCleanerIds: []
   };
 
   var savedKey = localStorage.getItem(STORAGE_KEY);
@@ -415,17 +417,48 @@
         var k = this.dataset.key;
         state.selectedDate = k;
         renderCalendar();
-        renderDayDetail(k);
+        loadUnavailability(k);
       });
       cell.dataset.key = key;
       calGrid.appendChild(cell);
     }
   }
 
-  function cleanerOptionsHtml(selectedId) {
+  function loadUnavailability(date) {
+    dayDetail.innerHTML = '<p class="msg muted">Loading...</p>';
+    fetch(API_BASE + '/api/admin/unavailability?date=' + encodeURIComponent(date), { headers: authHeaders() })
+      .then(function (res) {
+        if (!res.ok) throw new Error('failed');
+        return res.json();
+      })
+      .then(function (data) {
+        state.unavailableDate = date;
+        state.unavailableCleanerIds = data.cleanerIds || [];
+        renderDayDetail(date);
+      })
+      .catch(function () {
+        state.unavailableDate = date;
+        state.unavailableCleanerIds = [];
+        renderDayDetail(date);
+      });
+  }
+
+  function cleanerOptionsHtml(selectedId, currentBookingId, date, time) {
+    var busyIds = (state.bookingsByDate[date] || [])
+      .filter(function (b) { return b.id !== currentBookingId && b.time === time && b.cleaner_id; })
+      .map(function (b) { return b.cleaner_id; });
+    var unavailableIds = state.unavailableDate === date ? state.unavailableCleanerIds : [];
+
     var opts = '<option value="">Unassigned</option>';
     state.cleaners.forEach(function (c) {
-      opts += '<option value="' + c.id + '"' + (c.id === selectedId ? ' selected' : '') + '>' + escapeHtml(c.name) + '</option>';
+      var isSelected = c.id === selectedId;
+      var isUnavailable = unavailableIds.indexOf(c.id) !== -1;
+      var isBusy = busyIds.indexOf(c.id) !== -1;
+      var label = c.name + (isUnavailable ? ' (unavailable)' : (isBusy ? ' (already booked)' : ''));
+      opts += '<option value="' + c.id + '"' +
+        (isSelected ? ' selected' : '') +
+        (!isSelected && (isUnavailable || isBusy) ? ' disabled' : '') +
+        '>' + escapeHtml(label) + '</option>';
     });
     return opts;
   }
@@ -455,7 +488,7 @@
         (tasksHtml ? '<div class="task-tags">' + tasksHtml + '</div>' : '') +
         '<div class="assign-row">' +
         '<label for="assign-' + b.id + '">Staff</label>' +
-        '<select id="assign-' + b.id + '" data-id="' + b.id + '">' + cleanerOptionsHtml(b.cleaner_id) + '</select>' +
+        '<select id="assign-' + b.id + '" data-id="' + b.id + '">' + cleanerOptionsHtml(b.cleaner_id, b.id, b.date, b.time) + '</select>' +
         (b.cleaner_id ? '<button class="ghost whatsapp-btn" data-id="' + b.id + '">Send via WhatsApp</button>' : '') +
         '<button class="ghost danger delete-btn" data-id="' + b.id + '">Delete</button>' +
         '</div>' +
@@ -759,11 +792,13 @@
     tasksList.innerHTML = state.tasks.map(function (t) {
       return '<div class="list-row">' +
         '<span>' + escapeHtml(t.name) + (t.active ? '' : ' <span class="msg muted">(inactive)</span>') + '</span>' +
-        '<button class="ghost" data-id="' + t.id + '" data-active="' + t.active + '">' + (t.active ? 'Deactivate' : 'Activate') + '</button>' +
-        '</div>';
+        '<span style="display:flex;gap:8px;">' +
+        '<button class="ghost toggle-active-btn" data-id="' + t.id + '" data-active="' + t.active + '">' + (t.active ? 'Deactivate' : 'Activate') + '</button>' +
+        '<button class="ghost danger delete-task-btn" data-id="' + t.id + '" data-name="' + escapeHtml(t.name) + '">Delete</button>' +
+        '</span></div>';
     }).join('');
 
-    tasksList.querySelectorAll('button[data-id]').forEach(function (btn) {
+    tasksList.querySelectorAll('.toggle-active-btn').forEach(function (btn) {
       btn.addEventListener('click', function () {
         var makeActive = this.dataset.active !== '1';
         fetch(API_BASE + '/api/admin/tasks/' + this.dataset.id, {
@@ -778,6 +813,29 @@
           });
       });
     });
+
+    tasksList.querySelectorAll('.delete-task-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () { deleteTask(this.dataset.id, this.dataset.name); });
+    });
+  }
+
+  function deleteTask(id, name) {
+    if (!window.confirm('Delete "' + name + '"? It will no longer be offered on new bookings, but existing bookings that already include it are unaffected.')) return;
+
+    fetch(API_BASE + '/api/admin/tasks/' + id, {
+      method: 'DELETE',
+      headers: authHeaders()
+    })
+      .then(function (res) {
+        if (!res.ok) throw new Error('failed');
+        taskMsg.textContent = '"' + name + '" deleted.';
+        taskMsg.className = 'msg success';
+        return loadTasks();
+      })
+      .catch(function () {
+        taskMsg.textContent = 'Could not delete task. Please try again.';
+        taskMsg.className = 'msg error';
+      });
   }
 
   addTaskForm.addEventListener('submit', function (e) {

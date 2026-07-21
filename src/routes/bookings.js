@@ -18,11 +18,29 @@ function occurrenceDate(startDate, repeat, index) {
     return d.toISOString().slice(0, 10);
 }
 
+function slotCapacity(date) {
+    const totalStaff = db.prepare('SELECT COUNT(*) AS c FROM cleaners').get().c;
+    const unavailable = db.prepare('SELECT COUNT(*) AS c FROM cleaner_unavailability WHERE date = ?').get(date).c;
+    return Math.max(totalStaff - unavailable, 0);
+}
+
+function slotBookedCount(date, time) {
+    return db.prepare('SELECT COUNT(*) AS c FROM bookings WHERE date = ? AND time = ?').get(date, time).c;
+}
+
 const insertBookingSeries = db.transaction((name, email, phone, address, service, date, time, taskIds, repeat) => {
     const insertBooking = db.prepare(
         'INSERT INTO bookings (name, email, phone, address, service, date, time) VALUES (?, ?, ?, ?, ?, ?, ?)'
     );
-    const insertTask = db.prepare('INSERT INTO booking_tasks (booking_id, task_id) VALUES (?, ?)');
+    const insertTask = db.prepare('INSERT INTO booking_tasks (booking_id, task_id, name) VALUES (?, ?, ?)');
+
+    const taskNames = new Map();
+    if (taskIds.length) {
+        const placeholders = taskIds.map(() => '?').join(',');
+        db.prepare(`SELECT id, name FROM tasks WHERE id IN (${placeholders})`)
+            .all(...taskIds)
+            .forEach((t) => taskNames.set(t.id, t.name));
+    }
 
     const count = repeat === 'none' ? 1 : REPEAT_OCCURRENCES;
     let firstId = null;
@@ -31,18 +49,15 @@ const insertBookingSeries = db.transaction((name, email, phone, address, service
 
     for (let i = 0; i < count; i++) {
         const occDate = occurrenceDate(date, repeat, i);
-        try {
-            const result = insertBooking.run(name, email, phone, address, service, occDate, time);
-            taskIds.forEach((taskId) => insertTask.run(result.lastInsertRowid, taskId));
-            if (firstId === null) firstId = result.lastInsertRowid;
-            bookedCount++;
-        } catch (err) {
-            if (err.code === 'SQLITE_CONSTRAINT_UNIQUE') {
-                skippedDates.push(occDate);
-            } else {
-                throw err;
-            }
+        if (slotBookedCount(occDate, time) >= slotCapacity(occDate)) {
+            skippedDates.push(occDate);
+            continue;
         }
+
+        const result = insertBooking.run(name, email, phone, address, service, occDate, time);
+        taskIds.forEach((taskId) => insertTask.run(result.lastInsertRowid, taskId, taskNames.get(taskId) || ''));
+        if (firstId === null) firstId = result.lastInsertRowid;
+        bookedCount++;
     }
 
     return { firstId, bookedCount, skippedDates };
@@ -59,8 +74,11 @@ router.get('/availability', (req, res) => {
         return res.status(400).json({ error: 'invalid-date' });
     }
 
-    const rows = db.prepare('SELECT time FROM bookings WHERE date = ?').all(date);
-    res.json({ bookedSlots: rows.map((r) => r.time) });
+    const rows = db.prepare('SELECT time, COUNT(*) AS cnt FROM bookings WHERE date = ? GROUP BY time').all(date);
+    const bookedCounts = {};
+    rows.forEach((r) => { bookedCounts[r.time] = r.cnt; });
+
+    res.json({ capacity: slotCapacity(date), bookedCounts });
 });
 
 router.post('/bookings', (req, res) => {
@@ -105,9 +123,8 @@ router.get('/bookings', requireAdmin, (req, res) => {
     const placeholders = ids.map(() => '?').join(',');
     const taskRows = db
         .prepare(
-            `SELECT bt.booking_id, t.id, t.name, bt.completed_at
-             FROM booking_tasks bt JOIN tasks t ON t.id = bt.task_id
-             WHERE bt.booking_id IN (${placeholders})`
+            `SELECT booking_id, task_id AS id, name, completed_at
+             FROM booking_tasks WHERE booking_id IN (${placeholders})`
         )
         .all(...ids);
 

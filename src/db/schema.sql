@@ -24,13 +24,19 @@ CREATE TABLE IF NOT EXISTS bookings (
   time TEXT NOT NULL,
   cleaner_id INTEGER,
   completed_at TEXT,
-  created_at TEXT DEFAULT (datetime('now')),
-  UNIQUE(date, time)
+  created_at TEXT DEFAULT (datetime('now'))
 );
 
 CREATE TABLE IF NOT EXISTS booking_tasks (
   booking_id INTEGER NOT NULL,
   task_id INTEGER NOT NULL,
+  name TEXT NOT NULL DEFAULT '',
   completed_at TEXT,
   PRIMARY KEY (booking_id, task_id)
+);
+
+CREATE TABLE IF NOT EXISTS cleaner_unavailability (
+  cleaner_id INTEGER NOT NULL,
+  date TEXT NOT NULL,
+  PRIMARY KEY (cleaner_id, date)
 );

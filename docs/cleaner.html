@@ -77,7 +77,18 @@
     margin-bottom: 16px;
   }
   label { font-size: 0.9rem; color: var(--muted); display: block; margin-bottom: 6px; }
-  select, input[type="password"] {
+  h2.section-title {
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 700;
+    font-size: 1.05rem;
+    margin: 0 0 14px;
+    color: var(--ink);
+  }
+  .list-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .list-row:last-child { border-bottom: none; }
+  .availability-form { display: flex; gap: 10px; }
+  .availability-form input[type="date"] { flex: 1; margin-bottom: 0; }
+  select, input[type="password"], input[type="date"] {
     width: 100%;
     padding: 12px;
     border: 1.5px solid var(--line-2);
@@ -118,6 +129,8 @@
   button.ghost:hover { border-color: var(--pink); color: var(--pink); }
   button.ghost:disabled { opacity: 0.5; cursor: not-allowed; }
   button.ghost:disabled:hover { border-color: var(--line-2); color: var(--ink); }
+  button.ghost.danger { color: var(--danger); }
+  button.ghost.danger:hover { border-color: var(--danger); color: var(--danger); }
   .job-actions .hint { display: block; margin-top: 6px; font-size: 0.8rem; color: var(--muted); }
   .msg { font-size: 0.9rem; margin-top: 10px; }
   .msg.error { color: var(--danger); }
@@ -196,6 +209,17 @@
       <h1>Your <span class="script">jobs</span></h1>
       <button class="ghost" id="logout-btn">Log out</button>
     </div>
+
+    <div class="card">
+      <h2 class="section-title">Your availability</h2>
+      <div class="availability-form">
+        <input type="date" id="unavailable-date-input">
+        <button class="ghost" id="mark-unavailable-btn">Mark day off</button>
+      </div>
+      <p class="msg" id="availability-msg"></p>
+      <div id="unavailable-list"></div>
+    </div>
+
     <div id="jobs-list"></div>
   </div>
 </div>
@@ -223,6 +247,12 @@
   var loginMsg = document.getElementById('login-msg');
   var jobsList = document.getElementById('jobs-list');
   var logoutBtn = document.getElementById('logout-btn');
+  var unavailableDateInput = document.getElementById('unavailable-date-input');
+  var markUnavailableBtn = document.getElementById('mark-unavailable-btn');
+  var unavailableList = document.getElementById('unavailable-list');
+  var availabilityMsg = document.getElementById('availability-msg');
+
+  unavailableDateInput.min = new Date().toISOString().slice(0, 10);
 
   function authHeaders() {
     return { Authorization: 'Bearer ' + localStorage.getItem(TOKEN_KEY) };
@@ -246,6 +276,7 @@
     loginView.style.display = 'none';
     jobsView.style.display = 'block';
     loadJobs();
+    loadUnavailability();
   }
 
   function loadCleanerNames() {
@@ -390,6 +421,83 @@
         if (res.status === 401) throw new Error('unauthorized');
         if (!res.ok) throw new Error('failed');
         return loadJobs();
+      })
+      .catch(function (err) {
+        if (err.message === 'unauthorized') showLogin();
+      });
+  }
+
+  function renderUnavailableDates(dates) {
+    if (!dates.length) {
+      unavailableList.innerHTML = '<p class="msg muted">You\'re available every day.</p>';
+      return;
+    }
+
+    unavailableList.innerHTML = dates.map(function (date) {
+      return '<div class="list-row"><span>' + escapeHtml(date) + '</span>' +
+        '<button class="ghost danger remove-unavailable-btn" data-date="' + escapeHtml(date) + '">Remove</button></div>';
+    }).join('');
+
+    unavailableList.querySelectorAll('.remove-unavailable-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () { removeUnavailable(this.dataset.date); });
+    });
+  }
+
+  function loadUnavailability() {
+    fetch(API_BASE + '/api/cleaner/unavailability', { headers: authHeaders() })
+      .then(function (res) {
+        if (res.status === 401) throw new Error('unauthorized');
+        if (!res.ok) throw new Error('server-error');
+        return res.json();
+      })
+      .then(function (data) {
+        renderUnavailableDates(data.dates || []);
+      })
+      .catch(function (err) {
+        if (err.message === 'unauthorized') {
+          showLogin();
+        } else {
+          unavailableList.innerHTML = '<p class="msg error">Could not load your availability.</p>';
+        }
+      });
+  }
+
+  markUnavailableBtn.addEventListener('click', function () {
+    var date = unavailableDateInput.value;
+    if (!date) {
+      availabilityMsg.textContent = 'Pick a date first.';
+      availabilityMsg.className = 'msg error';
+      return;
+    }
+
+    availabilityMsg.textContent = '';
+    fetch(API_BASE + '/api/cleaner/unavailability', {
+      method: 'POST',
+      headers: Object.assign({ 'Content-Type': 'application/json' }, authHeaders()),
+      body: JSON.stringify({ date: date })
+    })
+      .then(function (res) {
+        if (res.status === 401) throw new Error('unauthorized');
+        if (!res.ok) throw new Error('failed');
+        unavailableDateInput.value = '';
+        return loadUnavailability();
+      })
+      .catch(function (err) {
+        if (err.message === 'unauthorized') return showLogin();
+        availabilityMsg.textContent = 'Could not mark that day. Please try again.';
+        availabilityMsg.className = 'msg error';
+      });
+  });
+
+  function removeUnavailable(date) {
+    fetch(API_BASE + '/api/cleaner/unavailability/' + encodeURIComponent(date), {
+      method: 'DELETE',
+      headers: authHeaders()
+    })
+      .then(function (res) {
+        if (res.status === 401) throw new Error('unauthorized');
+        if (!res.ok) throw new Error('failed');
+        return loadUnavailability();
       })
       .catch(function (err) {
         if (err.message === 'unauthorized') showLogin();
